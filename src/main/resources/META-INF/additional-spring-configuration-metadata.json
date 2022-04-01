@@ -1,0 +1,50 @@
+{
+	"properties": [
+		{
+			"name": "configuration.square.access",
+			"type": "java.lang.String",
+			"description": "A description for 'configuration.square.access'"
+		},
+		{
+			"name": "configuration.square.location",
+			"type": "java.lang.String",
+			"description": "A description for 'configuration.square.location'"
+		},
+		{
+			"name": "configuration.square.url",
+			"type": "java.lang.String",
+			"description": "A description for 'configuration.square.url'"
+		},
+		{
+			"name": "configuration.square.delivery",
+			"type": "java.lang.String",
+			"description": "A description for 'configuration.square.delivery'"
+		},
+		{
+			"name": "twilio.account.sid",
+			"type": "java.lang.String",
+			"description": "A description for twilio.account.sid"
+		},
+		{
+			"name": "twilio.auth.token",
+			"type": "java.lang.String",
+			"description": "A description for twilio.auth.token"
+		},
+		{
+			"name": "twilio.phone.number",
+			"type": "java.lang.String",
+			"description": "A description for twilio.phone.number"
+		},
+		{
+			"name": "shipstation.api.key",
+			"type": "java.lang.String",
+			"description": "A description for shipstation.api.key"
+		},
+				{
+			"name": "shipstation.api.secret",
+			"type": "java.lang.String",
+			"description": "A description for shipstation.api.secret"
+		}
+		
+	]
+}

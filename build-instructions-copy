@@ -1,0 +1,49 @@
+Instructions for changing the Square API key doing the build and restarting the server
+
+1. Log into the server as root
+	This assumes you have alread6y set up an ssh connection
+	ssh root@167.99.40.102
+	
+2. Edit the properties file
+	cd ~/ssa/shopify-square-automation/src/main/resources
+	
+	change the value of configuration.square.access
+	save and edit
+	
+3. Kill the running application
+	ps -ef | grep java
+	
+	find the entry for the jar file. It will look something lie this:
+	dean	11661	10161	2	13:24	pts/0	00:00:14 java -jar target/shopify-square-automation-=0.0.1-SNAPSHOT.jar
+	
+	In the above line the process id is the second column (11661). You need to kill that process. Type:
+	kill -15 11661 (using your process id of course
+	
+	wait 10 seconds and run
+	ps -ef | grep java
+	
+	to confirm the process is gone.
+	
+	If you see something like this, it's probably a good idea to wait a couple of seconds and check again. I don't think it matters, but...
+	
+	[1]+ Exit 143
+	
+4. Do the build		
+
+	cd ~/ssa/shopify-square-automation
+	rm -fr target/
+	mvn clean install
+	
+   Confirm the build
+	ls -l target/shopify-square-automation-0.0.1-SNAPSHOT.jar
+	(check the timestamp - probably GMT time)
+	
+5.	Start the server
+	this is the bare command: java -jar target/shopify-square-automation-0.0.1-SNAPSHOT.jar
+	but use the following instead to run it in the background so you can log out and leave it running
+	
+	nohup java -jar target/shopify-square-automation-0.0.1-SNAPSHOT.jar >/dev/null 2>&1 &
+	
+	
+	
+	
