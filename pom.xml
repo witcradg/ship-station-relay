@@ -86,7 +86,7 @@
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<mainClass>io.witcradg.shipstationrelayeapi.ShipStationAutomationApplication</mainClass>
+							<mainClass>io.witcradg.shipstationrelayapi.ShipStationAutomationApplication</mainClass>
 						</manifest>
 					</archive>
 				</configuration>
