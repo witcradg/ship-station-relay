@@ -345,23 +345,72 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	}
 	
 	@Override
-	public void getShipStationFulfillment(String orderNumber) {
-
-		// example
-		String publishURL = String.format("https://ssapi.shipstation.com/fulfillments");
-		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber=D8G-1198");
-		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber="+orderNumber);
-		log.debug("publishURL: " + publishURL);
+	public JSONObject getShipStationBatch(String resource_url) {
+		log.debug("resource_url: " + resource_url);
 
 		HttpEntity<Void> requestEntity = new HttpEntity<>(shipHeaders);
 
 		ResponseEntity<String> response = restTemplate.exchange(
-				publishURL, HttpMethod.GET, requestEntity, String.class);
+				resource_url, HttpMethod.GET, requestEntity, String.class);
+		// log.debug("response get: " + response);
+		  
+		// convert the response String to a JSON object 
+		JSONObject responseShipStation = new JSONObject(response); 
+		log.debug("responseShipStation: " + responseShipStation); 
+		log.debug("tpAa response body: " + responseShipStation.get("body"));
+				
+//		String body = "{\"status\":\"success\",\"data\":{\"id\":1,\"employee_name\":\"Tiger Nixon\",\"employee_salary\":320800,\"employee_age\":61,\"profile_image\":\"\"},\"message\":\"Successfully! Record has been fetched.\"}";
+
+		//JSONObject jsonObjectBody = responseShipStation.getString("body"));
+		String bdy = responseShipStation.getString("body");
+		JSONObject jsonObjectBody = new JSONObject(bdy);
+		JSONObject data = jsonObjectBody.getJSONObject("data");
+		log.debug("data: " + data);
+
+		return data;
+	}
+	
+	public void processBatch(Object object) {
+		log.debug("entering processBatch function", object.toString());
+	
+		
+		/* ******************** AfterShip fields
+		 * 	courier,
+		 * 	tracking_number,
+		 *  email,
+		 *  sms,
+		 *  order_id,
+		 *  title,
+		 *  order_path,
+		 *  customer_name,
+		 *  origin_country,
+		 *  destination_country,
+		 *  custom_1,
+		 *  custom_2,
+		 *  tracking_postal_code,
+		 *  tracking_ship_date,
+		 *  tracking_account_number,
+		 *  tracking_key,
+		 *  tracking_destination_country 
+		 */
+		
+
+		
+		// example
+		//String publishURL = String.format("https://ssapi.shipstation.com/fulfillments");
+		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber=D8G-1198");
+		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber="+orderNumber);
+//		log.debug("publishURL: " + publishURL);
+
+//		HttpEntity<Void> requestEntity = new HttpEntity<>(shipHeaders);
+
+//		ResponseEntity<String> response = restTemplate.exchange(
+//				publishURL, HttpMethod.GET, requestEntity, String.class);
 		//log.debug("response get: " + response);
 		
 		// convert the response String to a JSON object
-		JSONObject responseShipStation = new JSONObject(response);
-		log.debug("responseShipStation: " + responseShipStation);
+//		JSONObject responseShipStation = new JSONObject(response);
+//		log.debug("responseShipStation: " + responseShipStation);
 	}		
 
 	/***************************************************************** 

@@ -22,19 +22,18 @@ import lombok.extern.log4j.Log4j2;
 @RestController
 public class SsaController {
 
-	boolean useSquareApi = false; //disable unused code without deleting it
+	boolean useSquareApi = false; // disable unused code without deleting it
 	boolean useShipStationApi = true;
-	
+
 	@Autowired
 	ICommunicatorService communicatorService;
 
 	@PostMapping("/ssa")
-	public ResponseEntity<HttpStatus> save(@RequestBody String rawJson) {
+	public ResponseEntity<HttpStatus> createNewOrder(@RequestBody String rawJson) {
 
 		try {
 			JSONObject jsonObject = new JSONObject(rawJson);
 			if ("order.completed".equals(jsonObject.getString("eventName"))) {
-//log.info("testpoint 1", rawJson);
 				JSONObject content = jsonObject.getJSONObject("content");
 				CustomerOrder customerOrder = new CustomerOrder(content);
 				if (useSquareApi) {
@@ -46,8 +45,8 @@ public class SsaController {
 				}
 				if (useShipStationApi) {
 					communicatorService.postShipStationOrder(customerOrder);
-					//communicatorService.getShipStationFulfillment("D8G-1198");
-					communicatorService.getShipStationOrder("TEST-0001");
+					// communicatorService.getShipStationFulfillment("D8G-1198");
+					//communicatorService.getShipStationOrder("TEST-0001");
 				}
 			}
 			return new ResponseEntity<>(HttpStatus.OK);
@@ -56,6 +55,24 @@ public class SsaController {
 			log.error("rawJson: " + rawJson);
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
+	}
+
+	@PostMapping("/shipped")
+	public ResponseEntity<HttpStatus> onShipped(@RequestBody String rawJson) {  
+		log.info("testpoint 1", rawJson);
+
+		JSONObject jsonObject = new JSONObject(rawJson);
+		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {
+			try {
+				JSONObject obj = communicatorService.getShipStationBatch(jsonObject.getString("resource_url"));
+				communicatorService.processBatch(obj);
+			} catch (Exception e) {
+				log.error(e.getMessage());
+				log.error("rawJson: " + rawJson);
+				return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+		}
+		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
 	@RequestMapping(value = "**")
@@ -73,14 +90,14 @@ public class SsaController {
 		log.error("    Request URL: " + request.getRequestURL());
 
 		StringBuffer headers = new StringBuffer();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        while (headerNames.hasMoreElements()) {
-            String key = (String) headerNames.nextElement();
-            String value = request.getHeader(key);
-            headers.append(key +":"+ value +",");
-        }
-        log.error("headers" + headers );
-		
+		Enumeration<String> headerNames = request.getHeaderNames();
+		while (headerNames.hasMoreElements()) {
+			String key = (String) headerNames.nextElement();
+			String value = request.getHeader(key);
+			headers.append(key + ":" + value + ",");
+		}
+		log.error("headers" + headers);
+
 		try {
 			log.error(request.getReader().lines().collect(Collectors.joining(System.lineSeparator())));
 		} catch (Exception e) {
