@@ -1,12 +1,14 @@
 package io.witcradg.shipstationrelayapi.service;
 
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Calendar;
 import java.util.UUID;
 
 import javax.annotation.PostConstruct;
@@ -60,10 +62,17 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	
 	@Value("${shipstation.api.secret}")
 	private String shipstationApiSecret;
+	
+	//TODO ****************************************************************** needs to be added to the application.properties
+	private String aftershipApiKey = "foo";
+	private String aftershipApiSecret = "bar";
+	
 		
 	private RestTemplate restTemplate = new RestTemplate();
 	private HttpHeaders headers = new HttpHeaders();
 	private HttpHeaders shipHeaders = new HttpHeaders();
+	private HttpHeaders afterShipHeaders = new HttpHeaders();
+
 
 
 	@PostConstruct
@@ -72,13 +81,19 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		headers.add("Authorization", "Bearer "+ auth);
 		headers.setContentType(MediaType.APPLICATION_JSON);
 
-		String data= shipstationApiKey + ":" + shipstationApiSecret;
-	    String encodedStr = Base64.getEncoder()
-	            .encodeToString(data.getBytes(StandardCharsets.UTF_8.name()));
-    
-		shipHeaders.add("Authorization", "Basic " + encodedStr );
-		shipHeaders.setContentType(MediaType.APPLICATION_JSON);
+		String shipStationData= shipstationApiKey + ":" + shipstationApiSecret;
+	    String shipStationDataEncodedStr = Base64.getEncoder()
+	            .encodeToString(shipStationData.getBytes(StandardCharsets.UTF_8.name()));
 
+	    shipHeaders.add("Authorization", "Basic " + shipStationDataEncodedStr );
+		shipHeaders.setContentType(MediaType.APPLICATION_JSON);
+	    
+		String aftershipData= aftershipApiKey + ":" + aftershipApiSecret;
+	    String aftershipDataEncodedStr = Base64.getEncoder()
+	            .encodeToString(aftershipData.getBytes(StandardCharsets.UTF_8.name()));
+	    
+	    afterShipHeaders.add("Authorization", "Basic " + aftershipDataEncodedStr );
+	    afterShipHeaders.setContentType(MediaType.APPLICATION_JSON);
 	}
 	
 	@Override
@@ -370,31 +385,67 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		return data;
 	}
 	
-	public void processBatch(Object object) {
-		log.debug("entering processBatch function", object.toString());
 	
+	/*
+	 * https://developers.aftership.com/reference/quick-start
+	 * https://developers.aftership.com/reference/post-trackings
+	 * NOTE: THE ABOVE CONTAINS DETAILED BREAKDOWN 
+	 * https://developers.aftership.com/reference/object-tracking
+	 * 		Common Scenarios: Scenario 1.
+	 * 
+	 * curl --location --request POST 'https://api.aftership.com/v4/trackings' \
+		--header 'aftership-api-key: your aftership api key' \
+		--header 'Content-Type: application/json' \
+		--data-raw '{
+	    	"tracking": {
+	        	"tracking_number": "9405511202575421535949",
+	        	"slug": "usps"
+	    	}
+		}'
 		
-		/* ******************** AfterShip fields
-		 * 	courier,
-		 * 	tracking_number,
-		 *  email,
-		 *  sms,
-		 *  order_id,
-		 *  title,
-		 *  order_path,
-		 *  customer_name,
-		 *  origin_country,
-		 *  destination_country,
-		 *  custom_1,
-		 *  custom_2,
-		 *  tracking_postal_code,
-		 *  tracking_ship_date,
-		 *  tracking_account_number,
-		 *  tracking_key,
-		 *  tracking_destination_country 
+	 * use "usps" for carrier slug
+	 */
+	public void processBatch(JSONObject object) {
+		log.debug("entering processBatch function" + object.toString());
+	
+		/*
+		 * Assumptions 
+		 * 	I'll need to extract and iterate over multiple records
+		 *  Create a new empty AfterShip bundle (FORMAT TBD: JsonArray, CSV, etc.)
+		 *  For Each Ship Station Record
+		 * 		MAY need a lookup TBD
+		 *    	Create a new AfterShip Record
+		 *  	Map fields from the ShipStation record to a new AfterShip record
+		 *  	insert AfterShip record into the AfterShip bundle
+		 *  Create new POST (confirm a POST is used)
+		 *  Call the POST
+		 *  Handle the response
 		 */
 		
+		// START LOOP
+		// 		Do some magic here to do iteration over the "object" variable
+		// 		and create one ore more JSONObjects (shipstationRecord) for each record in the ShipStation dataset
+		
+			JSONObject shipstationRecord = new JSONObject(); //TODO MOCK for raw JSON to be extracted from the dataset
+//			log.debug("shipstationRecord: " + shipstationRecord.toString());
 
+		
+			JSONObject aftershipRecord = createAfterShipTrackingRecord(shipstationRecord);
+			log.debug("aftershipRecord: " + aftershipRecord.toString());
+			
+			
+			JSONObject requestBody = new JSONObject();
+//			requestBody.put("idempotency_key", UUID.randomUUID().toString());
+			requestBody.put("tracking", aftershipRecord);
+
+			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
+			log.debug("request: " + request.getBody());
+			
+			String response = restTemplate.postForObject(url_base+"/orders", request, String.class);
+
+
+		
+		// END LOOP
 		
 		// example
 		//String publishURL = String.format("https://ssapi.shipstation.com/fulfillments");
@@ -458,7 +509,6 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			JSONObject orderItem = items.getJSONObject(i);
 			
 			JSONObject shipItem =  new JSONObject();
-//TODO confirm customer order price is actually unit price			
 			if (!orderItem.getString("name").equals("Recurring plan")) {
 				shipItem.put("unitPrice", orderItem.getInt("price"));			
 				shipItem.put("quantity", orderItem.getInt("quantity"));
@@ -471,5 +521,154 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		log.debug("requestBody original:" + requestBody);
 		return requestBody;
 	}
+
+private JSONObject createAfterShipTrackingRecord(JSONObject record) {
+	JSONObject trackingPost = new JSONObject();
 	
+	/* FOR ShipStation batched records received "FROM"
+	{
+	shipments: [
+		{
+			shipmentId: 27394493,
+			orderId: 77777972,
+			orderKey: 'eb2ca4e04766406c9693c5292f3d319c',
+			userId: '63ec9bfd-987e-477c-ba5d-72988adb5bcc',
+			customerEmail: 'monteagle@hotmail.com',
+			orderNumber: 'D8G-2482',
+			createDate: '2022-04-05T14:17:54.6800000',
+			shipDate: '2022-04-05',
+			shipmentCost: 11.35,
+			insuranceCost: 0.0,
+			trackingNumber: '9410811202508168181851',
+			isReturnLabel: false,
+			batchNumber: null,
+			carrierCode: 'stamps_com',
+			serviceCode: 'usps_priority_mail',
+			packageCode: 'flat_rate_padded_envelope',
+			confirmation: 'signature',
+			warehouseId: 39270,
+			voided: false,
+			voidDate: null,
+			marketplaceNotified: false,
+			notifyErrorMessage: null,
+			shipTo: {
+				name: 'Angela Sampley ',
+				company: null,
+				street1: '343 ARMORY RD',
+				street2: '',
+				street3: null,
+				city: 'MONTEAGLE',
+				state: 'TN',
+				postalCode: '37356-7606',
+				country: 'US',
+				phone: '',
+				residential: null,
+				addressVerified: null
+			},
+			weight: { value: 4.0, units: 'ounces', WeightUnits: 1 },
+			dimensions: null,
+			insuranceOptions: { provider: null, insureShipment: false, insuredValue: 0.0 },
+			advancedOptions: {
+				billToParty: '4',
+				billToAccount: null,
+				billToPostalCode: null,
+				billToCountryCode: null,
+				storeId: 54658
+			},
+			shipmentItems: null,
+			labelData: null,
+			formData: null
+		}
+	],
+	total: 1,
+	page: 1,
+	pages: 1
+	}
+	 */
+	
+	/* for AfterShip records "TO" (Note: there may be more fields wanted/needed. There are numerous other optional fields
+	 * including "Custom".
+	{
+		"tracking": {
+    		"slug": "dhl",
+		    "tracking_number": "6123456789",
+		    "title": "Title Name",
+		    "smses": [
+		        "+18555072509",
+		        "+18555072501"
+		    ],
+		    "emails": [
+		        "email@yourdomain.com",
+		        "another_email@yourdomain.com"
+		    ],
+		    "order_id": "ID 1234",		order number? The order_id_path uses a url
+		    "order_number": "1234",		
+		    "order_id_path": "http://www.aftership.com/order_id=1234",
+		    "custom_fields": {
+		        "product_name": "iPhone Case",
+		        "product_price": "USD19.99"
+		    },
+		    "language": "en",
+		    "order_promised_delivery_date": "2019-05-20",
+		    "delivery_type": "pickup_at_store",
+		    "pickup_location": "Flagship Store",
+		    "pickup_note": "Reach out to our staffs when you arrive our stores for shipment pickup"
+		}
+	}	
+	 */
+	
+
+	JSONObject shipStationData = new JSONObject("{\"shipments\":[{\"shipmentId\":27394493,\"orderId\":77777972,\"orderKey\":\"eb2ca4e04766406c9693c5292f3d319c\",\"userId\":\"63ec9bfd-987e-477c-ba5d-72988adb5bcc\",\"customerEmail\":\"monteagle@hotmail.com\",\"orderNumber\":\"D8G-2482\",\"createDate\":\"2022-04-05T14:17:54.6800000\",\"shipDate\":\"2022-04-05\",\"shipmentCost\":11.35,\"insuranceCost\":0.00,\"trackingNumber\":\"9410811202508168181851\",\"isReturnLabel\":false,\"batchNumber\":null,\"carrierCode\":\"stamps_com\",\"serviceCode\":\"usps_priority_mail\",\"packageCode\":\"flat_rate_padded_envelope\",\"confirmation\":\"signature\",\"warehouseId\":39270,\"voided\":false,\"voidDate\":null,\"marketplaceNotified\":false,\"notifyErrorMessage\":null,\"shipTo\":{\"name\":\"Angela Sampley \",\"company\":null,\"street1\":\"343 ARMORY RD\",\"street2\":\"\",\"street3\":null,\"city\":\"MONTEAGLE\",\"state\":\"TN\",\"postalCode\":\"37356-7606\",\"country\":\"US\",\"phone\":\"\",\"residential\":null,\"addressVerified\":null},\"weight\":{\"value\":4.00,\"units\":\"ounces\",\"WeightUnits\":1},\"dimensions\":null,\"insuranceOptions\":{\"provider\":null,\"insureShipment\":false,\"insuredValue\":0.0},\"advancedOptions\":{\"billToParty\":\"4\",\"billToAccount\":null,\"billToPostalCode\":null,\"billToCountryCode\":null,\"storeId\":54658},\"shipmentItems\":null,\"labelData\":null,\"formData\":null}],\"total\":1,\"page\":1,\"pages\":1}\n");
+	
+	String total =  shipStationData.getString("total");
+	String page =  shipStationData.getString("pages");
+	String pages =  shipStationData.getString("pages");
+	
+	log.debug("total: " + total);
+	log.debug("page: " + page);
+	log.debug("pages: " + pages);
+
+	JSONArray shipStationOrders = shipStationData.getJSONArray("shipments");
+	
+	JSONObject order = shipStationOrders.getJSONObject(0);
+		
+	String shipmentNbr = order.getString("shipmentId");
+	String orderNbr = order.getString("orderNumber");
+	String trackingNbr = order.getString("tracking_number");
+	String recipient = order.getString("recipient");
+	String shipDate = order.getString("ship_date");
+	String packingSlipPrinted = "";		order.getString("packing_slip_printed");
+	String labelCreated = "Created";			order.getString("label_created");
+	String labelPrinted = "";			order.getString("label_printed");
+	String marketplaceNotified = "Not Notified";	order.getString("marketplace_notified");
+	String shipmentNotification = "Not Sent";	order.getString("shipment_notification");
+	String deliveryNotification = "Failed";	order.getString("delivery_notification");
+
+	//TODO NOTE: order_date, SMS and email values will require a lookup for each record.
+	
+	//TODO Is there a difference for AfterShip between USPS Priority Mail and USPS regular main? 
+	//I'm guessing not since it doesn't seem to be offered as a carrier option in AfterShip, but I should check.
+	
+	trackingPost.put("slug", "usps"); // hard-coded for now since no other carriers are supported by delta8gummies.
+	trackingPost.put("tracking_number", trackingNbr);
+
+	String timeStamp = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss").format(Calendar.getInstance().getTime());
+	System.out.println(timeStamp);
+	String title = "ShipStationRelay" + timeStamp;
+	trackingPost.put("title", title);
+
+	JSONArray smses = new JSONArray();
+	trackingPost.put("smses", smses);
+	
+	JSONArray emails = new JSONArray();
+	trackingPost.put("emails", emails);
+
+	trackingPost.put("order_id", shipmentNbr);
+	trackingPost.put("order_number", orderNbr);
+//	trackingPost.put("order_id_path", ????); //This might be something that is only populated on a GET from AfterShip and not something we should populate 
+// custom fields pending
+	trackingPost.put("language","en");
+
+	return trackingPost;
+}
 }

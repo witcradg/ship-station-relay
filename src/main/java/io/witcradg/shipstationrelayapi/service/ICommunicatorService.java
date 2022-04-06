@@ -12,5 +12,5 @@ public interface ICommunicatorService {
 	public abstract void postShipStationOrder(CustomerOrder customerOrder) throws Exception;
 	public abstract void getShipStationOrder(String orderNumber);
 	public abstract JSONObject getShipStationBatch(String resource_url);
-	public abstract void processBatch(Object object);
+	public abstract void processBatch(JSONObject object);
 }
