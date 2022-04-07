@@ -90,12 +90,12 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		shipHeaders.setContentType(MediaType.APPLICATION_JSON);
 	    
 		// https://developers.aftership.com/reference/authentication
-		//TODO REMOVE? String aftershipData= aftershipApiKey + ":" + aftershipApiSecret;
-	    String aftershipDataEncodedStr = Base64.getEncoder()
-	            .encodeToString(aftershipApiKey.getBytes(StandardCharsets.UTF_8.name()));
-	    
-	    afterShipHeaders.add("Authorization", "Basic " + aftershipDataEncodedStr );
+		// https://developers.aftership.com/reference/post-trackings
+	    ArrayList<MediaType> acceptMediaTypes = new ArrayList<>();
+	    acceptMediaTypes.add(MediaType.APPLICATION_JSON);
+	    afterShipHeaders.setAccept(acceptMediaTypes);
 	    afterShipHeaders.setContentType(MediaType.APPLICATION_JSON);
+	    afterShipHeaders.add("aftership-api-key","28bbce66-0779-4d6e-be34-693ea11c6a35");
 	}
 	
 	@Override
@@ -391,8 +391,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	
 	public void processShipStationBatch(JSONObject shipstationBatch) {
 		log.debug("entering processBatch function" + shipstationBatch.toString());
-	
-		
+			
 		//extract data not in the array
 		Integer total =  shipstationBatch.getInt("total");
 		Integer page =  shipstationBatch.getInt("pages");
@@ -415,23 +414,17 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			
 			JSONObject requestBody = new JSONObject();
 			requestBody.put("tracking", aftershipRecord);
-			
-			log.debug("requestBody: " + requestBody.toString());
 
-if (false) {			
 			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), afterShipHeaders);
-			log.debug("request: " + request.getBody());
+			log.debug("request: " + request.toString());
 			
 			String response = restTemplate.postForObject(aftership_url_base+"/trackings", request, String.class);
 
 			// response body https://developers.aftership.com/reference/body-envelope
-			
-			// convert the response String to a JSON object
 			JSONObject aftershipResponse = new JSONObject(response);
 			log.debug("aftershipResponse: " + aftershipResponse);
 
-			//TODO error handling ?
-}
+			//TODO error handling/notification/SMS ?
 		}
 	}		
 
@@ -493,99 +486,9 @@ if (false) {
 		return requestBody;
 	}
 	
-	
-	/* FOR ShipStation batched records received "FROM"
-	{
-	shipments: [
-		{
-			shipmentId: 27394493,
-			orderId: 77777972,
-			orderKey: 'eb2ca4e04766406c9693c5292f3d319c',
-			userId: '63ec9bfd-987e-477c-ba5d-72988adb5bcc',
-			customerEmail: 'monteagle@hotmail.com',
-			orderNumber: 'D8G-2482',
-			createDate: '2022-04-05T14:17:54.6800000',
-			shipDate: '2022-04-05',
-			shipmentCost: 11.35,
-			insuranceCost: 0.0,
-			trackingNumber: '9410811202508168181851',
-			isReturnLabel: false,
-			batchNumber: null,
-			carrierCode: 'stamps_com',
-			serviceCode: 'usps_priority_mail',
-			packageCode: 'flat_rate_padded_envelope',
-			confirmation: 'signature',
-			warehouseId: 39270,
-			voided: false,
-			voidDate: null,
-			marketplaceNotified: false,
-			notifyErrorMessage: null,
-			shipTo: {
-				name: 'Angela Sampley ',
-				company: null,
-				street1: '343 ARMORY RD',
-				street2: '',
-				street3: null,
-				city: 'MONTEAGLE',
-				state: 'TN',
-				postalCode: '37356-7606',
-				country: 'US',
-				phone: '',
-				residential: null,
-				addressVerified: null
-			},
-			weight: { value: 4.0, units: 'ounces', WeightUnits: 1 },
-			dimensions: null,
-			insuranceOptions: { provider: null, insureShipment: false, insuredValue: 0.0 },
-			advancedOptions: {
-				billToParty: '4',
-				billToAccount: null,
-				billToPostalCode: null,
-				billToCountryCode: null,
-				storeId: 54658
-			},
-			shipmentItems: null,
-			labelData: null,
-			formData: null
-		}
-	],
-	total: 1,
-	page: 1,
-	pages: 1
-	}
+	/* 
+	 * Functional but not complete pending a decision on how to handle emails and phone numbers to avoid sharing with ShipStation.
 	 */
-		
-	/* for AfterShip records "TO" (Note: there may be more fields wanted/needed. There are numerous other optional fields
-	 * including "Custom".
-	{
-		"tracking": {
-    		"slug": "dhl",
-		    "tracking_number": "6123456789",
-		    "title": "Title Name",
-		    "smses": [
-		        "+18555072509",
-		        "+18555072501"
-		    ],
-		    "emails": [
-		        "email@yourdomain.com",
-		        "another_email@yourdomain.com"
-		    ],
-		    "order_id": "ID 1234",		order number? The order_id_path uses a url
-		    "order_number": "1234",		
-		    "order_id_path": "http://www.aftership.com/order_id=1234",
-		    "custom_fields": {
-		        "product_name": "iPhone Case",
-		        "product_price": "USD19.99"
-		    },
-		    "language": "en",
-		    "order_promised_delivery_date": "2019-05-20",
-		    "delivery_type": "pickup_at_store",
-		    "pickup_location": "Flagship Store",
-		    "pickup_note": "Reach out to our staffs when you arrive our stores for shipment pickup"
-		}
-	}	
-	 */
-	
 	
 	private JSONObject createAfterShipTrackingRecord(JSONObject shipstationOrder) {
 		JSONObject trackingRecord = new JSONObject();
@@ -597,8 +500,6 @@ if (false) {
 		String phone = shipTo.getString("phone");
 		String customerName = shipTo.getString("name");
 		//String shipDate = shipstationOrder.getString("shipDate"); //Actually the date ShipStation printed the shipping labels
-		//String labelCreated = shipstationOrder.getString("labelCreated"); //NOT FOUND
-		//String labelPrinted = shipstationOrder.getString("labelPrinted");  //NOT FOUND
 	
 		//TODO Is there a difference for AfterShip between USPS Priority Mail and USPS regular main? 
 		//I'm guessing not since it doesn't seem to be offered as a carrier option in AfterShip, but I should check.

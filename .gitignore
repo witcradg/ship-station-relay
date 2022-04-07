@@ -37,4 +37,5 @@ log/
 /src/main/resources/app**
 
 .history/
+misc/
 

@@ -65,10 +65,7 @@ public class SsaController {
 		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {
 			try {
 				
-				//JSONObject shipstationData = communicatorService.getShipStationBatch(jsonObject.getString("resource_url"));
-				//TODO Remove MOCK 
-				JSONObject shipstationBatch = new JSONObject("{\"shipments\":[{\"shipmentId\":27394493,\"orderId\":77777972,\"orderKey\":\"eb2ca4e04766406c9693c5292f3d319c\",\"userId\":\"63ec9bfd-987e-477c-ba5d-72988adb5bcc\",\"customerEmail\":\"monteagle@hotmail.com\",\"orderNumber\":\"D8G-2482\",\"createDate\":\"2022-04-05T14:17:54.6800000\",\"shipDate\":\"2022-04-05\",\"shipmentCost\":11.35,\"insuranceCost\":0.00,\"trackingNumber\":\"9410811202508168181851\",\"isReturnLabel\":false,\"batchNumber\":null,\"carrierCode\":\"stamps_com\",\"serviceCode\":\"usps_priority_mail\",\"packageCode\":\"flat_rate_padded_envelope\",\"confirmation\":\"signature\",\"warehouseId\":39270,\"voided\":false,\"voidDate\":null,\"marketplaceNotified\":false,\"notifyErrorMessage\":null,\"shipTo\":{\"name\":\"Angela Sampley \",\"company\":null,\"street1\":\"343 ARMORY RD\",\"street2\":\"\",\"street3\":null,\"city\":\"MONTEAGLE\",\"state\":\"TN\",\"postalCode\":\"37356-7606\",\"country\":\"US\",\"phone\":\"\",\"residential\":null,\"addressVerified\":null},\"weight\":{\"value\":4.00,\"units\":\"ounces\",\"WeightUnits\":1},\"dimensions\":null,\"insuranceOptions\":{\"provider\":null,\"insureShipment\":false,\"insuredValue\":0.0},\"advancedOptions\":{\"billToParty\":\"4\",\"billToAccount\":null,\"billToPostalCode\":null,\"billToCountryCode\":null,\"storeId\":54658},\"shipmentItems\":null,\"labelData\":null,\"formData\":null}],\"total\":1,\"page\":1,\"pages\":1}\n");
-
+				JSONObject shipstationBatch = communicatorService.getShipStationBatch(jsonObject.getString("resource_url"));
 				communicatorService.processShipStationBatch(shipstationBatch);
 			} catch (Exception e) {
 				log.error(e.getMessage());
