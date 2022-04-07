@@ -63,16 +63,17 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	@Value("${shipstation.api.secret}")
 	private String shipstationApiSecret;
 	
-	//TODO ****************************************************************** needs to be added to the application.properties
-	private String aftershipApiKey = "foo";
-	private String aftershipApiSecret = "bar";
+	@Value("${aftership.api.key}")
+	private String aftershipApiKey;
+	
+	@Value("${configuration.aftership.url}")
+	private String aftership_url_base;
 	
 		
 	private RestTemplate restTemplate = new RestTemplate();
 	private HttpHeaders headers = new HttpHeaders();
 	private HttpHeaders shipHeaders = new HttpHeaders();
 	private HttpHeaders afterShipHeaders = new HttpHeaders();
-
 
 
 	@PostConstruct
@@ -88,9 +89,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	    shipHeaders.add("Authorization", "Basic " + shipStationDataEncodedStr );
 		shipHeaders.setContentType(MediaType.APPLICATION_JSON);
 	    
-		String aftershipData= aftershipApiKey + ":" + aftershipApiSecret;
+		// https://developers.aftership.com/reference/authentication
+		//TODO REMOVE? String aftershipData= aftershipApiKey + ":" + aftershipApiSecret;
 	    String aftershipDataEncodedStr = Base64.getEncoder()
-	            .encodeToString(aftershipData.getBytes(StandardCharsets.UTF_8.name()));
+	            .encodeToString(aftershipApiKey.getBytes(StandardCharsets.UTF_8.name()));
 	    
 	    afterShipHeaders.add("Authorization", "Basic " + aftershipDataEncodedStr );
 	    afterShipHeaders.setContentType(MediaType.APPLICATION_JSON);
@@ -359,6 +361,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		
 	}
 	
+	/****************************************************************** 
+	 * SHIP STATION RELAY METHODS
+	 *******************************************************************/
+	
 	@Override
 	public JSONObject getShipStationBatch(String resource_url) {
 		log.debug("resource_url: " + resource_url);
@@ -372,12 +378,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		// convert the response String to a JSON object 
 		JSONObject responseShipStation = new JSONObject(response); 
 		log.debug("responseShipStation: " + responseShipStation); 
-		log.debug("tpAa response body: " + responseShipStation.get("body"));
-				
-//		String body = "{\"status\":\"success\",\"data\":{\"id\":1,\"employee_name\":\"Tiger Nixon\",\"employee_salary\":320800,\"employee_age\":61,\"profile_image\":\"\"},\"message\":\"Successfully! Record has been fetched.\"}";
 
-		//JSONObject jsonObjectBody = responseShipStation.getString("body"));
 		String bdy = responseShipStation.getString("body");
+		log.debug("getShipStationBatch response body: " + bdy);
+		
 		JSONObject jsonObjectBody = new JSONObject(bdy);
 		JSONObject data = jsonObjectBody.getJSONObject("data");
 		log.debug("data: " + data);
@@ -385,83 +389,50 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		return data;
 	}
 	
+	public void processShipStationBatch(JSONObject shipstationBatch) {
+		log.debug("entering processBatch function" + shipstationBatch.toString());
 	
-	/*
-	 * https://developers.aftership.com/reference/quick-start
-	 * https://developers.aftership.com/reference/post-trackings
-	 * NOTE: THE ABOVE CONTAINS DETAILED BREAKDOWN 
-	 * https://developers.aftership.com/reference/object-tracking
-	 * 		Common Scenarios: Scenario 1.
-	 * 
-	 * curl --location --request POST 'https://api.aftership.com/v4/trackings' \
-		--header 'aftership-api-key: your aftership api key' \
-		--header 'Content-Type: application/json' \
-		--data-raw '{
-	    	"tracking": {
-	        	"tracking_number": "9405511202575421535949",
-	        	"slug": "usps"
-	    	}
-		}'
 		
-	 * use "usps" for carrier slug
-	 */
-	public void processBatch(JSONObject object) {
-		log.debug("entering processBatch function" + object.toString());
-	
-		/*
-		 * Assumptions 
-		 * 	I'll need to extract and iterate over multiple records
-		 *  Create a new empty AfterShip bundle (FORMAT TBD: JsonArray, CSV, etc.)
-		 *  For Each Ship Station Record
-		 * 		MAY need a lookup TBD
-		 *    	Create a new AfterShip Record
-		 *  	Map fields from the ShipStation record to a new AfterShip record
-		 *  	insert AfterShip record into the AfterShip bundle
-		 *  Create new POST (confirm a POST is used)
-		 *  Call the POST
-		 *  Handle the response
-		 */
+		//extract data not in the array
+		Integer total =  shipstationBatch.getInt("total");
+		Integer page =  shipstationBatch.getInt("pages");
+		Integer pages =  shipstationBatch.getInt("pages");
 		
-		// START LOOP
-		// 		Do some magic here to do iteration over the "object" variable
-		// 		and create one ore more JSONObjects (shipstationRecord) for each record in the ShipStation dataset
+		log.debug("total: " + total);
+		log.debug("page: " + page);
+		log.debug("pages: " + pages);
 		
-			JSONObject shipstationRecord = new JSONObject(); //TODO MOCK for raw JSON to be extracted from the dataset
-//			log.debug("shipstationRecord: " + shipstationRecord.toString());
-
+		// get the shipments array
+		JSONArray shipments = shipstationBatch.getJSONArray("shipments");
 		
-			JSONObject aftershipRecord = createAfterShipTrackingRecord(shipstationRecord);
+		// loop over all order records received from ShipStation
+		for (int i = 0; i < shipments.length(); i++) {
+			JSONObject shipstationOrder = shipments.getJSONObject(i);
+			log.debug("shipstationOrder: " + shipstationOrder.toString());
+		
+			JSONObject aftershipRecord = createAfterShipTrackingRecord(shipstationOrder);
 			log.debug("aftershipRecord: " + aftershipRecord.toString());
 			
-			
 			JSONObject requestBody = new JSONObject();
-//			requestBody.put("idempotency_key", UUID.randomUUID().toString());
 			requestBody.put("tracking", aftershipRecord);
+			
+			log.debug("requestBody: " + requestBody.toString());
 
-			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
+if (false) {			
+			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), afterShipHeaders);
 			log.debug("request: " + request.getBody());
 			
-			String response = restTemplate.postForObject(url_base+"/orders", request, String.class);
+			String response = restTemplate.postForObject(aftership_url_base+"/trackings", request, String.class);
 
+			// response body https://developers.aftership.com/reference/body-envelope
+			
+			// convert the response String to a JSON object
+			JSONObject aftershipResponse = new JSONObject(response);
+			log.debug("aftershipResponse: " + aftershipResponse);
 
-		
-		// END LOOP
-		
-		// example
-		//String publishURL = String.format("https://ssapi.shipstation.com/fulfillments");
-		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber=D8G-1198");
-		//String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber="+orderNumber);
-//		log.debug("publishURL: " + publishURL);
-
-//		HttpEntity<Void> requestEntity = new HttpEntity<>(shipHeaders);
-
-//		ResponseEntity<String> response = restTemplate.exchange(
-//				publishURL, HttpMethod.GET, requestEntity, String.class);
-		//log.debug("response get: " + response);
-		
-		// convert the response String to a JSON object
-//		JSONObject responseShipStation = new JSONObject(response);
-//		log.debug("responseShipStation: " + responseShipStation);
+			//TODO error handling ?
+}
+		}
 	}		
 
 	/***************************************************************** 
@@ -521,9 +492,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		log.debug("requestBody original:" + requestBody);
 		return requestBody;
 	}
-
-private JSONObject createAfterShipTrackingRecord(JSONObject record) {
-	JSONObject trackingPost = new JSONObject();
+	
 	
 	/* FOR ShipStation batched records received "FROM"
 	{
@@ -585,7 +554,7 @@ private JSONObject createAfterShipTrackingRecord(JSONObject record) {
 	pages: 1
 	}
 	 */
-	
+		
 	/* for AfterShip records "TO" (Note: there may be more fields wanted/needed. There are numerous other optional fields
 	 * including "Custom".
 	{
@@ -617,58 +586,67 @@ private JSONObject createAfterShipTrackingRecord(JSONObject record) {
 	}	
 	 */
 	
-
-	JSONObject shipStationData = new JSONObject("{\"shipments\":[{\"shipmentId\":27394493,\"orderId\":77777972,\"orderKey\":\"eb2ca4e04766406c9693c5292f3d319c\",\"userId\":\"63ec9bfd-987e-477c-ba5d-72988adb5bcc\",\"customerEmail\":\"monteagle@hotmail.com\",\"orderNumber\":\"D8G-2482\",\"createDate\":\"2022-04-05T14:17:54.6800000\",\"shipDate\":\"2022-04-05\",\"shipmentCost\":11.35,\"insuranceCost\":0.00,\"trackingNumber\":\"9410811202508168181851\",\"isReturnLabel\":false,\"batchNumber\":null,\"carrierCode\":\"stamps_com\",\"serviceCode\":\"usps_priority_mail\",\"packageCode\":\"flat_rate_padded_envelope\",\"confirmation\":\"signature\",\"warehouseId\":39270,\"voided\":false,\"voidDate\":null,\"marketplaceNotified\":false,\"notifyErrorMessage\":null,\"shipTo\":{\"name\":\"Angela Sampley \",\"company\":null,\"street1\":\"343 ARMORY RD\",\"street2\":\"\",\"street3\":null,\"city\":\"MONTEAGLE\",\"state\":\"TN\",\"postalCode\":\"37356-7606\",\"country\":\"US\",\"phone\":\"\",\"residential\":null,\"addressVerified\":null},\"weight\":{\"value\":4.00,\"units\":\"ounces\",\"WeightUnits\":1},\"dimensions\":null,\"insuranceOptions\":{\"provider\":null,\"insureShipment\":false,\"insuredValue\":0.0},\"advancedOptions\":{\"billToParty\":\"4\",\"billToAccount\":null,\"billToPostalCode\":null,\"billToCountryCode\":null,\"storeId\":54658},\"shipmentItems\":null,\"labelData\":null,\"formData\":null}],\"total\":1,\"page\":1,\"pages\":1}\n");
 	
-	String total =  shipStationData.getString("total");
-	String page =  shipStationData.getString("pages");
-	String pages =  shipStationData.getString("pages");
+	private JSONObject createAfterShipTrackingRecord(JSONObject shipstationOrder) {
+		JSONObject trackingRecord = new JSONObject();
+			
+		//BigInteger shipmentNbr = shipstationOrder.getBigInteger("shipmentId");
+		String orderNbr = shipstationOrder.getString("orderNumber");
+		String trackingNbr = shipstationOrder.getString("trackingNumber");
+		JSONObject shipTo = shipstationOrder.getJSONObject("shipTo");
+		String phone = shipTo.getString("phone");
+		String customerName = shipTo.getString("name");
+		//String shipDate = shipstationOrder.getString("shipDate"); //Actually the date ShipStation printed the shipping labels
+		//String labelCreated = shipstationOrder.getString("labelCreated"); //NOT FOUND
+		//String labelPrinted = shipstationOrder.getString("labelPrinted");  //NOT FOUND
 	
-	log.debug("total: " + total);
-	log.debug("page: " + page);
-	log.debug("pages: " + pages);
-
-	JSONArray shipStationOrders = shipStationData.getJSONArray("shipments");
-	
-	JSONObject order = shipStationOrders.getJSONObject(0);
+		//TODO Is there a difference for AfterShip between USPS Priority Mail and USPS regular main? 
+		//I'm guessing not since it doesn't seem to be offered as a carrier option in AfterShip, but I should check.
 		
-	String shipmentNbr = order.getString("shipmentId");
-	String orderNbr = order.getString("orderNumber");
-	String trackingNbr = order.getString("tracking_number");
-	String recipient = order.getString("recipient");
-	String shipDate = order.getString("ship_date");
-	String packingSlipPrinted = "";		order.getString("packing_slip_printed");
-	String labelCreated = "Created";			order.getString("label_created");
-	String labelPrinted = "";			order.getString("label_printed");
-	String marketplaceNotified = "Not Notified";	order.getString("marketplace_notified");
-	String shipmentNotification = "Not Sent";	order.getString("shipment_notification");
-	String deliveryNotification = "Failed";	order.getString("delivery_notification");
-
-	//TODO NOTE: order_date, SMS and email values will require a lookup for each record.
+		//slug
+		trackingRecord.put("slug", "usps"); // hard-coded for now since no other carriers are supported by delta8gummies.
+		
+		//tracking number
+		trackingRecord.put("tracking_number", trackingNbr);
 	
-	//TODO Is there a difference for AfterShip between USPS Priority Mail and USPS regular main? 
-	//I'm guessing not since it doesn't seem to be offered as a carrier option in AfterShip, but I should check.
+		//title
+		String timeStamp = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss").format(Calendar.getInstance().getTime());
+		System.out.println(timeStamp);
+		String title = "ShipStationRelay-" + timeStamp;
+		trackingRecord.put("title", title);
 	
-	trackingPost.put("slug", "usps"); // hard-coded for now since no other carriers are supported by delta8gummies.
-	trackingPost.put("tracking_number", trackingNbr);
-
-	String timeStamp = new SimpleDateFormat("dd/MM/yyyy_HH:mm:ss").format(Calendar.getInstance().getTime());
-	System.out.println(timeStamp);
-	String title = "ShipStationRelay" + timeStamp;
-	trackingPost.put("title", title);
-
-	JSONArray smses = new JSONArray();
-	trackingPost.put("smses", smses);
+		//TODO with implementation of data storage and retreival on receipt of the original record from snipcart
+		//smses
+//		JSONArray smses = new JSONArray();
+//		smses.put(phone);
+//		trackingRecord.put("smses", smses);
 	
-	JSONArray emails = new JSONArray();
-	trackingPost.put("emails", emails);
-
-	trackingPost.put("order_id", shipmentNbr);
-	trackingPost.put("order_number", orderNbr);
-//	trackingPost.put("order_id_path", ????); //This might be something that is only populated on a GET from AfterShip and not something we should populate 
-// custom fields pending
-	trackingPost.put("language","en");
-
-	return trackingPost;
-}
+		//emails
+		JSONArray emails = new JSONArray();
+		String email = shipstationOrder.getString("customerEmail");
+		log.info(email);
+		emails.put(email);
+		trackingRecord.put("emails", emails);
+	
+		trackingRecord.put("order_id", orderNbr);
+		
+		trackingRecord.put("order_number", orderNbr);
+		
+		//	trackingPost.put("order_id_path", ????); //This might be something that is only populated on a GET from AfterShip and not something we should populate 
+		
+		// custom fields pending
+		
+		trackingRecord.put("language","en");
+		
+		//customer name
+		trackingRecord.put("customerName", customerName);
+		
+		//order date
+		// is this createDate or shipDate? Are they the same? Is the date the order was received by ShipStation available?
+		
+//		createDate: '2022-04-05T14:17:54.6800000',
+//		shipDate: '2022-04-05',
+	
+		return trackingRecord;
+	}
 }

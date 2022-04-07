@@ -44,6 +44,16 @@
 			"name": "shipstation.api.secret",
 			"type": "java.lang.String",
 			"description": "A description for shipstation.api.secret"
+		},
+		{
+			"name": "configuration.aftership.url",
+			"type": "java.lang.String",
+			"description": "A description for 'configuration.aftership.url'"
+		},
+		{
+			"name": "aftership.api.key",
+			"type": "java.lang.String",
+			"description": "A description for aftership.api.key"
 		}
 		
 	]
