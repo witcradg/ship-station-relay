@@ -59,7 +59,7 @@ public class SsaController {
 
 	@PostMapping("/shipped")
 	public ResponseEntity<HttpStatus> onShipped(@RequestBody String rawJson) {  
-		log.info("testpoint 1", rawJson);
+		log.info("onShipped: " + rawJson);
 
 		JSONObject jsonObject = new JSONObject(rawJson);
 		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {

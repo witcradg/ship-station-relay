@@ -383,10 +383,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		log.debug("getShipStationBatch response body: " + bdy);
 		
 		JSONObject jsonObjectBody = new JSONObject(bdy);
-		JSONObject data = jsonObjectBody.getJSONObject("data");
-		log.debug("data: " + data);
+//		JSONObject data = jsonObjectBody.getJSONObject("data");
+//		log.debug("data: " + data);
 
-		return data;
+		return jsonObjectBody;
 	}
 	
 	public void processShipStationBatch(JSONObject shipstationBatch) {
@@ -419,6 +419,14 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			log.debug("request: " + request.toString());
 			
 			String response = restTemplate.postForObject(aftership_url_base+"/trackings", request, String.class);
+
+			//TODO WIP
+//			try {
+//				String response = restTemplate.postForObject(aftership_url_base+"/trackings", request, String.class);
+//			} catch( Exception e) {
+//				log.info("POST failed: " + e.getMessage()); //capture handling for messaging 
+//				throw e;
+//			}
 
 			// response body https://developers.aftership.com/reference/body-envelope
 			JSONObject aftershipResponse = new JSONObject(response);
