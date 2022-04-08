@@ -513,7 +513,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		//I'm guessing not since it doesn't seem to be offered as a carrier option in AfterShip, but I should check.
 		
 		//slug
-		trackingRecord.put("slug", "usps"); // hard-coded for now since no other carriers are supported by delta8gummies.
+		//trackingRecord.put("slug", "usps"); 
 		
 		//tracking number
 		trackingRecord.put("tracking_number", trackingNbr);
