@@ -23,7 +23,7 @@ import lombok.extern.log4j.Log4j2;
 public class SsaController {
 
 	boolean useSquareApi = true; // optionally disable unused code without deleting it
-	boolean useShipStationApi = true;
+	boolean useShipStationApi = false;
 
 	@Autowired
 	ICommunicatorService communicatorService;

@@ -20,15 +20,13 @@ public class CustomerOrder {
 
 		this.setEmailAddress(content.getJSONObject("user").getString("email"));
 		this.setScInvoiceNumber(content.getString("invoiceNumber"));
-		this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal")*100));
+		this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal") * 100));
 		this.setScOrderWeight(Integer.toString(content.getInt("totalWeight")));
 		this.setScOrderDate(content.getString("completionDate"));
 
 		JSONObject address = content.getJSONObject("shippingAddress");
 
 		this.setItems(content.getJSONArray("items"));
-		
-		// this.setPhoneNumber(address.getString("phone"));
 
 		// this.setCompanyName(address.getString("company"));
 		this.setFullName(address.getString("fullName"));
@@ -39,8 +37,10 @@ public class CustomerOrder {
 		this.setCity(address.getString("city"));
 		this.setState(address.getString("province"));
 		this.setPostalCode(address.getString("postalCode"));
-		this.setPhoneNumber(address.getString("phone"));
-		
+		// phone number field moved from shipping address to customFields
+		JSONObject phoneNumberField = content.getJSONArray("customFields").getJSONObject(0);
+		this.setPhoneNumber(phoneNumberField.getString("value"));
+
 		this.setShippingTotal(content.getInt("shippingFees"));
 	}
 
@@ -60,10 +60,10 @@ public class CustomerOrder {
 	private Integer shippingTotal;
 
 	private JSONArray items;
-	
+
 	private String scInvoiceNumber;// sc - snip cart
 	private Integer scInvoiceTotal;
-	
+
 	private String scOrderWeight;
 	private String scOrderDate;
 
@@ -71,5 +71,5 @@ public class CustomerOrder {
 	private String sqOrderId;
 	private String sqInvoiceId;
 	private Integer sqInvoiceVersion;
-	private String  paymentURL;
+	private String paymentURL;
 }

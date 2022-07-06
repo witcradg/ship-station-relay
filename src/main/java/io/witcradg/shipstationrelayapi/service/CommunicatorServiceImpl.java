@@ -297,9 +297,9 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		log.info("sendTo: " + sendTo);
 				
 		String messageContent = String.format(
-				"Thank You for your Order on Delta8gummies.com. Use this link to Complete Your Purchase: %s " +
-				"**Be Advised It takes up to 2 minutes before you can Complete Your Payment**" , 
-				customerOrder.getPaymentURL());
+				"Hey %s, Thank You for your Order on the D8G website. Use this link to Complete Your Purchase: %s " +
+				"**Be Advised It takes up to 2 minutes before you can Complete Your Payment**\n", 
+				customerOrder.getFullName(), customerOrder.getPaymentURL());  
 		
 		Twilio.init(twilioSid, twilioAuthToken);
 		
@@ -505,7 +505,6 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		String orderNbr = shipstationOrder.getString("orderNumber");
 		String trackingNbr = shipstationOrder.getString("trackingNumber");
 		JSONObject shipTo = shipstationOrder.getJSONObject("shipTo");
-		String phone = shipTo.getString("phone");
 		String customerName = shipTo.getString("name");
 		//String shipDate = shipstationOrder.getString("shipDate"); //Actually the date ShipStation printed the shipping labels
 	
