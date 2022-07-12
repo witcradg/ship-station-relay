@@ -1,4 +1,4 @@
-package io.witcradg.shipstationrelayapi.entity;
+package io.witcradg.ordertrackingapi.entity;
 
 import org.json.JSONArray;
 import org.json.JSONObject;

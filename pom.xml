@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>io.witcradg</groupId>
-	<artifactId>ship-station-relay-automation</artifactId>
+	<artifactId>order-tracking-automation</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>ship-station-relay-automation</name>
-	<description>API relaying orders to Ship Station and shipping data to AfterShip</description>
+	<name>order-tracking-automation</name>
+	<description>API for Square payment processing, relaying orders to Ship Station and relaying shipping data to AfterShip</description>
 	<properties>
 		<java.version>1.8</java.version>
 	    <log4j2.version>2.17.1</log4j2.version>
@@ -87,7 +87,7 @@
 					<archive>
 						<manifest>
 							<addClasspath>true</addClasspath>
-							<mainClass>io.witcradg.shipstationrelayapi.ShipStationAutomationApplication</mainClass>
+							<mainClass>io.witcradg.ordertrackingapi.OrderTrackingApplication</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

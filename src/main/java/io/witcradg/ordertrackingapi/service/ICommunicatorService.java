@@ -1,7 +1,8 @@
-package io.witcradg.shipstationrelayapi.service;
+package io.witcradg.ordertrackingapi.service;
 
-import io.witcradg.shipstationrelayapi.entity.CustomerOrder;
 import org.json.JSONObject;
+
+import io.witcradg.ordertrackingapi.entity.CustomerOrder;
 
 public interface ICommunicatorService {
 	public abstract void createCustomer(CustomerOrder customerOrder) throws Exception;

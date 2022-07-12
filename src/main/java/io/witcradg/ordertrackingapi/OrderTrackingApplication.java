@@ -1,12 +1,12 @@
-package io.witcradg.shipstationrelayapi;
+package io.witcradg.ordertrackingapi;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ShipStationAutomationApplication {
+public class OrderTrackingApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ShipStationAutomationApplication.class, args);
+		SpringApplication.run(OrderTrackingApplication.class, args);
 	}
 }

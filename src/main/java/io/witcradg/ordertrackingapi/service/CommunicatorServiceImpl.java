@@ -1,4 +1,4 @@
-package io.witcradg.shipstationrelayapi.service;
+package io.witcradg.ordertrackingapi.service;
 
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
@@ -24,13 +24,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import io.witcradg.shipstationrelayapi.entity.CustomerOrder;
-
 import lombok.extern.log4j.Log4j2;
 
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
+
+import io.witcradg.ordertrackingapi.entity.CustomerOrder;
 
 @Log4j2
 @Service

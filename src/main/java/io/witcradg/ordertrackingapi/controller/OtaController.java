@@ -1,4 +1,4 @@
-package io.witcradg.shipstationrelayapi.controller;
+package io.witcradg.ordertrackingapi.controller;
 
 import java.util.Enumeration;
 import java.util.stream.Collectors;
@@ -14,13 +14,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import io.witcradg.shipstationrelayapi.entity.CustomerOrder;
-import io.witcradg.shipstationrelayapi.service.ICommunicatorService;
+import io.witcradg.ordertrackingapi.entity.CustomerOrder;
+import io.witcradg.ordertrackingapi.service.ICommunicatorService;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 @RestController
-public class SsaController {
+public class OtaController {
 
 	boolean useSquareApi = true; // optionally disable unused code without deleting it
 	boolean useShipStationApi = false;
@@ -64,7 +64,6 @@ public class SsaController {
 		JSONObject jsonObject = new JSONObject(rawJson);
 		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {
 			try {
-				
 				JSONObject shipstationBatch = communicatorService.getShipStationBatch(jsonObject.getString("resource_url"));
 				communicatorService.processShipStationBatch(shipstationBatch);
 			} catch (Exception e) {
