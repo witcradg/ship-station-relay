@@ -16,32 +16,45 @@ public class CustomerOrder {
 
 	public CustomerOrder(JSONObject content) throws Exception {
 
-		log.debug("Customer constructor:" + content.getJSONObject("user"));
+		try {
+			log.debug("Customer constructor:" + content.getJSONObject("user"));
 
-		this.setEmailAddress(content.getJSONObject("user").getString("email"));
-		this.setScInvoiceNumber(content.getString("invoiceNumber"));
-		this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal") * 100));
-		this.setScOrderWeight(Integer.toString(content.getInt("totalWeight")));
-		this.setScOrderDate(content.getString("completionDate"));
+			this.setEmailAddress(content.getJSONObject("user").getString("email"));
+			this.setScInvoiceNumber(content.getString("invoiceNumber"));
+			this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal") * 100));
+			this.setScOrderWeight(Integer.toString(content.getInt("totalWeight")));
+			this.setScOrderDate(content.getString("completionDate"));
 
-		JSONObject address = content.getJSONObject("shippingAddress");
+			JSONObject address = content.getJSONObject("shippingAddress");
 
-		this.setItems(content.getJSONArray("items"));
+			this.setItems(content.getJSONArray("items"));
 
-		// this.setCompanyName(address.getString("company"));
-		this.setFullName(address.getString("fullName"));
-		this.setFamilyName(address.getString("name"));
-		this.setGivenName(address.isNull("firstName") ? "" : address.getString("firstName"));
-		this.setAddressLine1(address.getString("address1"));
-		this.setAddressLine2(address.getString("address2"));
-		this.setCity(address.getString("city"));
-		this.setState(address.getString("province"));
-		this.setPostalCode(address.getString("postalCode"));
-		// phone number field moved from shipping address to customFields
-		JSONObject phoneNumberField = content.getJSONArray("customFields").getJSONObject(0);
-		this.setPhoneNumber(phoneNumberField.getString("value"));
+			// this.setCompanyName(address.getString("company"));
+			this.setFullName(address.getString("fullName"));
+			this.setFamilyName(address.getString("name"));
+			this.setGivenName(address.isNull("firstName") ? "" : address.getString("firstName"));
+			this.setAddressLine1(address.getString("address1"));
+			this.setAddressLine2(address.getString("address2"));
+			this.setCity(address.getString("city"));
+			this.setState(address.getString("province"));
+			this.setPostalCode(address.getString("postalCode"));
 
-		this.setShippingTotal(content.getInt("shippingFees"));
+			// The phone number field used to be in the shipping address,
+			// then they moved it to customFields, now it's not in the custom fields.
+			// [sometimes?]
+
+			JSONArray customFields = content.getJSONArray("customFields");
+
+			if (customFields.length() > 0) {
+				JSONObject phoneNumberField = content.getJSONArray("customFields").getJSONObject(0);
+				this.setPhoneNumber(phoneNumberField.getString("value"));
+			}
+
+			this.setShippingTotal(content.getInt("shippingFees"));
+		} catch (Exception e) {
+			log.error("CustomerOrder constructor error");
+			throw e;
+		}
 	}
 
 	private String companyName;

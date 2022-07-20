@@ -16,7 +16,7 @@
 	<description>API for Square payment processing, relaying orders to Ship Station and relaying shipping data to AfterShip</description>
 	<properties>
 		<java.version>1.8</java.version>
-	    <log4j2.version>2.17.1</log4j2.version>
+		<log4j2.version>2.17.1</log4j2.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -64,6 +64,18 @@
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio</artifactId>
 			<version>8.18.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
 		</dependency>
 	</dependencies>
 	<build>

@@ -1,4 +1,4 @@
-package io.witcradg.ordertrackingapi.service;
+package io.witcradg.ordertrackingapi.exception;
 
 
 public class InvalidPhoneNumberException extends Exception {

@@ -15,56 +15,89 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.witcradg.ordertrackingapi.entity.CustomerOrder;
+import io.witcradg.ordertrackingapi.persistence.IOrderHistoryPersistenceService;
 import io.witcradg.ordertrackingapi.service.ICommunicatorService;
+import io.witcradg.ordertrackingapi.service.IEmailSenderService;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
 @RestController
 public class OtaController {
 
-	boolean useSquareApi = true; // optionally disable unused code without deleting it
-	boolean useShipStationApi = false;
+	// optionally disable unused code without deleting it
+	boolean useSquareApi = false; 
+	boolean useShipStationApi = true;
 
 	@Autowired
 	ICommunicatorService communicatorService;
+
+	@Autowired
+	IEmailSenderService emailSenderService;
+	
+	@Autowired
+	IOrderHistoryPersistenceService persistenceService;
+
+	boolean validOrder = false;
+	String stepMessage = "";
+	String orderNumber = "";
 
 	@PostMapping("/ssa")
 	public ResponseEntity<HttpStatus> createNewOrder(@RequestBody String rawJson) {
 
 		try {
+			stepMessage = "Parsing raw json";
 			JSONObject jsonObject = new JSONObject(rawJson);
+
+			stepMessage = "Checking for order.completed";
 			if ("order.completed".equals(jsonObject.getString("eventName"))) {
+				validOrder = true;
+				stepMessage = "Is valid order. Getting order number";
+
 				JSONObject content = jsonObject.getJSONObject("content");
+				stepMessage = content.getString("invoiceNumber");
+				orderNumber = stepMessage;
 				CustomerOrder customerOrder = new CustomerOrder(content);
+				
 				if (useSquareApi) {
 					communicatorService.createCustomer(customerOrder);
 					communicatorService.createOrder(customerOrder);
 					communicatorService.createInvoice(customerOrder);
 					communicatorService.publishInvoice(customerOrder);
+					persistenceService.write(orderNumber, "Square order created");					
 					communicatorService.sendSms(customerOrder);
+					persistenceService.write(orderNumber, "SMS sent");					
 				}
 				if (useShipStationApi) {
 					communicatorService.postShipStationOrder(customerOrder);
-					// communicatorService.getShipStationFulfillment("D8G-1198");
-					//communicatorService.getShipStationOrder("TEST-0001");
+					persistenceService.write(orderNumber, "ShipStation order posted");					
 				}
 			}
 			return new ResponseEntity<>(HttpStatus.OK);
 		} catch (Exception e) {
+
+			if (validOrder) {
+				emailSenderService.sendEmail("witcradg@gmail.com", "OTA system error",
+						String.format("Order Number: %s \n %s", orderNumber, rawJson));
+				persistenceService.write(orderNumber, "ERROR");
+			}
+
+			log.error("ERROR==================================\n");
+			log.error(stepMessage);
 			log.error(e.getMessage());
 			log.error("rawJson: " + rawJson);
+			log.error("---------------------------------------\n");
 			return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 	}
 
 	@PostMapping("/shipped")
-	public ResponseEntity<HttpStatus> onShipped(@RequestBody String rawJson) {  
+	public ResponseEntity<HttpStatus> onShipped(@RequestBody String rawJson) {
 		log.info("onShipped: " + rawJson);
-
 		JSONObject jsonObject = new JSONObject(rawJson);
 		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {
 			try {
-				JSONObject shipstationBatch = communicatorService.getShipStationBatch(jsonObject.getString("resource_url"));
+				JSONObject shipstationBatch = communicatorService
+						.getShipStationBatch(jsonObject.getString("resource_url"));
 				communicatorService.processShipStationBatch(shipstationBatch);
 			} catch (Exception e) {
 				log.error(e.getMessage());
@@ -79,6 +112,9 @@ public class OtaController {
 	public ResponseEntity<HttpStatus> error(HttpServletRequest request) {
 		dumpRequest(request);
 
+		emailSenderService.sendEmail("witcradg@gmail.com", "OTA system test",
+				String.format("Order Number: %s \n %s", orderNumber, request));
+		
 		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 
