@@ -112,9 +112,6 @@ public class OtaController {
 	public ResponseEntity<HttpStatus> error(HttpServletRequest request) {
 		dumpRequest(request);
 
-		emailSenderService.sendEmail("witcradg@gmail.com", "OTA system test",
-				String.format("Order Number: %s \n %s", orderNumber, request));
-		
 		return new ResponseEntity<>(HttpStatus.NOT_FOUND);
 	}
 
