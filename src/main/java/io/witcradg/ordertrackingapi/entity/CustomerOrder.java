@@ -17,8 +17,6 @@ public class CustomerOrder {
 	public CustomerOrder(JSONObject content) throws Exception {
 
 		try {
-			log.debug("Customer constructor:" + content.getJSONObject("user"));
-
 			this.setEmailAddress(content.getJSONObject("user").getString("email"));
 			this.setScInvoiceNumber(content.getString("invoiceNumber"));
 			this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal") * 100));
@@ -45,14 +43,16 @@ public class CustomerOrder {
 
 			JSONArray customFields = content.getJSONArray("customFields");
 
-			if (customFields.length() > 0) {
+			if (customFields != null && customFields.length() > 0) {
 				JSONObject phoneNumberField = content.getJSONArray("customFields").getJSONObject(0);
-				this.setPhoneNumber(phoneNumberField.getString("value"));
+				if (phoneNumberField != null) {
+					this.setPhoneNumber(phoneNumberField.getString("value"));
+				}
 			}
 
 			this.setShippingTotal(content.getInt("shippingFees"));
 		} catch (Exception e) {
-			log.error("CustomerOrder constructor error");
+			log.error("CustomerOrder constructor error: " + content.getJSONObject("user"));
 			throw e;
 		}
 	}
