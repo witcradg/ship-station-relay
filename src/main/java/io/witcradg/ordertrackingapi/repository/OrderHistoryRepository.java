@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import io.witcradg.ordertrackingapi.entity.OrderHistory;
 
 @Repository
-public interface OrderRepository extends JpaRepository<OrderHistory, Long>{
+public interface OrderHistoryRepository extends JpaRepository<OrderHistory, Long>{
 
 }

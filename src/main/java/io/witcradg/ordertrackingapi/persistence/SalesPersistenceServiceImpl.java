@@ -1,5 +1,7 @@
 package io.witcradg.ordertrackingapi.persistence;
 
+import java.math.BigInteger;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,15 +17,17 @@ public class SalesPersistenceServiceImpl implements ISalesPersistenceService {
 	private SalesRepository salesRepository;
 
 	@Override
-	public void write(String message) {
-		log.info(String.format("SalesPersistenceServiceImpl::write\n %s", message));
-	}
+	public void write(
+			String orderNumber, 
+			String sku, 
+			String productName, 
+			Integer quantitySold, 
+			BigInteger unitPrice, 
+			BigInteger totalPrice) {
+		log.info(String.format("SalesPersistenceServiceImpl::write\n %s | %s | %s | %n",
+				orderNumber, sku, productName, quantitySold, unitPrice, totalPrice));
 
-	@Override
-	public void write(String sku, String productName) {
-		log.info(String.format("SalesPersistenceServiceImpl::write\n %s | %s", sku, productName));
-
-		Sales sale = new Sales(sku, productName); 
+		Sales sale = new Sales(orderNumber, sku, productName, quantitySold, unitPrice, totalPrice); 
 
 		salesRepository.save(sale);
 	}

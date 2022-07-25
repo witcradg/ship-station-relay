@@ -14,4 +14,6 @@ public interface ICommunicatorService {
 	public abstract void getShipStationOrder(String orderNumber);
 	public abstract JSONObject getShipStationBatch(String resource_url);
 	public abstract void processShipStationBatch(JSONObject shipstationData);
+	public abstract void persistSale(String orderNumber);
+	
 }

@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import io.witcradg.ordertrackingapi.entity.CustomerOrder;
 import io.witcradg.ordertrackingapi.persistence.IOrderHistoryPersistenceService;
+import io.witcradg.ordertrackingapi.persistence.IOrderItemsPersistenceService;
+import io.witcradg.ordertrackingapi.persistence.ISalesPersistenceService;
 import io.witcradg.ordertrackingapi.service.ICommunicatorService;
 import io.witcradg.ordertrackingapi.service.IEmailSenderService;
 import lombok.extern.log4j.Log4j2;
@@ -25,19 +27,27 @@ import lombok.extern.log4j.Log4j2;
 public class OtaController {
 
 	// optionally disable unused code without deleting it
-	boolean useSquareApi = false; 
-	boolean useShipStationApi = true;
+	boolean useSquareApi = false;
+	boolean useShipStationApi = false;
 
 	@Autowired
 	ICommunicatorService communicatorService;
 
 	@Autowired
 	IEmailSenderService emailSenderService;
-	
+
 	@Autowired
-	IOrderHistoryPersistenceService persistenceService;
+	IOrderHistoryPersistenceService orderHistoryPersistence;
+
+	@Autowired
+	IOrderItemsPersistenceService orderItemsPersistence;
+
+	@Autowired
+	ISalesPersistenceService salesPersistence;
 
 	boolean validOrder = false;
+
+	// used for logging the most recent step in case of a processing error
 	String stepMessage = "";
 	String orderNumber = "";
 
@@ -57,28 +67,37 @@ public class OtaController {
 				stepMessage = content.getString("invoiceNumber");
 				orderNumber = stepMessage;
 				CustomerOrder customerOrder = new CustomerOrder(content);
-				
+
 				if (useSquareApi) {
 					communicatorService.createCustomer(customerOrder);
 					communicatorService.createOrder(customerOrder);
 					communicatorService.createInvoice(customerOrder);
 					communicatorService.publishInvoice(customerOrder);
-					persistenceService.write(orderNumber, "Square order created");					
+					orderHistoryPersistence.write(orderNumber, "Square order created");
 					communicatorService.sendSms(customerOrder);
-					persistenceService.write(orderNumber, "SMS sent");					
+					orderHistoryPersistence.write(orderNumber, "SMS sent");
 				}
 				if (useShipStationApi) {
 					communicatorService.postShipStationOrder(customerOrder);
-					persistenceService.write(orderNumber, "ShipStation order posted");					
+					orderHistoryPersistence.write(orderNumber, "ShipStation order posted");
 				}
+				orderItemsPersistence.write(orderNumber, customerOrder.getItems().toString());
+				
+				communicatorService.persistSale(orderNumber);
 			}
 			return new ResponseEntity<>(HttpStatus.OK);
 		} catch (Exception e) {
+			log.error(e.getMessage());
 
-			if (validOrder) {
-				emailSenderService.sendEmail("witcradg@gmail.com", "OTA system error",
-						String.format("Order Number: %s \n %s", orderNumber, rawJson));
-				persistenceService.write(orderNumber, "ERROR");
+			try {
+				if (validOrder) {
+					emailSenderService.sendEmail("witcradg@gmail.com", "OTA system error",
+							String.format("Order Number: %s \n %s", orderNumber, rawJson));
+					orderHistoryPersistence.write(orderNumber, "ERROR");
+				}
+			} catch (Exception ex) {
+				log.error("Exception thrown in OTA Exception clause");
+				log.error(ex.getMessage());
 			}
 
 			log.error("ERROR==================================\n");

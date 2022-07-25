@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import io.witcradg.ordertrackingapi.entity.OrderHistory;
-import io.witcradg.ordertrackingapi.repository.OrderRepository;
+import io.witcradg.ordertrackingapi.repository.OrderHistoryRepository;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -12,7 +12,7 @@ import lombok.extern.log4j.Log4j2;
 public class OrderHistoryPersistenceServiceImpl implements IOrderHistoryPersistenceService {
 
 	@Autowired
-	private OrderRepository orderRepository;
+	private OrderHistoryRepository orderHistoryRepository;
 
 	@Override
 	public void write(String message) {
@@ -24,6 +24,6 @@ public class OrderHistoryPersistenceServiceImpl implements IOrderHistoryPersiste
 		log.info(String.format("OrderHistoryPersistenceServiceImpl::write\n %s | %s", orderNumber, message));
 
 		OrderHistory orderHistory = new OrderHistory(orderNumber, message);
-		orderRepository.save(orderHistory);
+		orderHistoryRepository.save(orderHistory);
 	}
 }

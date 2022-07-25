@@ -1,5 +1,6 @@
 package io.witcradg.ordertrackingapi.entity;
 
+import java.math.BigInteger;
 import java.util.Date;
 
 import javax.persistence.Column;
@@ -22,6 +23,9 @@ public class Sales {
     @CreationTimestamp
     @Column (name = "date_sold")
     private Date dateSold = new Date();
+    
+    @Column(name = "order_number")
+    private String orderNumber;
 	
 	@Column(name = "sku")
 	private String sku;
@@ -29,14 +33,27 @@ public class Sales {
 	@Column(name = "product_name")
 	private String productName;
 	
+	@Column(name = "unit_price")
+	private BigInteger unitPrice;	
+	
+	@Column(name = "total_price")
+	private BigInteger totalPrice;		
+	
+	@Column(name = "quantity_sold")
+	private Integer quantitySold;
+	
 	public Sales() {
 		super();
 	}
 
-	public Sales(String sku, String productName) {
+	public Sales(String orderNumber, String sku, String productName, Integer quantitySold, BigInteger unitPrice, BigInteger totalPrice) {
 		super();
+		this.orderNumber = orderNumber;
 		this.sku = sku;
 		this.productName = productName;
+		this.quantitySold = quantitySold;
+		this.unitPrice = unitPrice;
+		this.totalPrice = totalPrice;
 	}
 
 	public long getId() {
@@ -55,6 +72,14 @@ public class Sales {
 		this.dateSold = dateSold;
 	}
 
+	public String getOrderNumber() {
+		return orderNumber;
+	}
+
+	public void setOrderNumber(String orderNumber) {
+		this.orderNumber = orderNumber;
+	}
+
 	public String getSku() {
 		return sku;
 	}
@@ -69,5 +94,13 @@ public class Sales {
 
 	public void setProductName(String productName) {
 		this.productName = productName;
-	}	
+	}
+
+	public Integer getQuantitySold() {
+		return quantitySold;
+	}
+
+	public void setQuantitySold(Integer quantitySold) {
+		this.quantitySold = quantitySold;
+	}
 }

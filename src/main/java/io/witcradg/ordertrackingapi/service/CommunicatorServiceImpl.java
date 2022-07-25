@@ -1,5 +1,6 @@
 package io.witcradg.ordertrackingapi.service;
 
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -9,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Calendar;
+import java.util.Iterator;
 import java.util.UUID;
 
 import javax.annotation.PostConstruct;
@@ -32,8 +34,11 @@ import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 
 import io.witcradg.ordertrackingapi.entity.CustomerOrder;
+import io.witcradg.ordertrackingapi.entity.OrderItems;
 import io.witcradg.ordertrackingapi.exception.InvalidPhoneNumberException;
 import io.witcradg.ordertrackingapi.persistence.IOrderHistoryPersistenceService;
+import io.witcradg.ordertrackingapi.persistence.IOrderItemsPersistenceService;
+import io.witcradg.ordertrackingapi.persistence.ISalesPersistenceService;
 
 @Log4j2
 @Service
@@ -73,7 +78,13 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	private String aftership_url_base;
 
 	@Autowired
-	IOrderHistoryPersistenceService persistenceService;
+	IOrderHistoryPersistenceService orderHistoryPersistenceService;
+
+	@Autowired
+	IOrderItemsPersistenceService orderItemsPersistenceService;
+	
+	@Autowired
+	ISalesPersistenceService salesPersistenceService;
 
 	private RestTemplate restTemplate = new RestTemplate();
 	private HttpHeaders headers = new HttpHeaders();
@@ -453,7 +464,8 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				JSONObject aftershipRecord = createAfterShipTrackingRecord(shipstationOrder);
 				log.debug("aftershipRecord: " + aftershipRecord.toString());
 
-				persistenceService.write(aftershipRecord.getString("order_number"), "Label printed");
+				String orderNumber = aftershipRecord.getString("order_number");
+				orderHistoryPersistenceService.write(orderNumber, "Label printed");
 
 				JSONObject requestBody = new JSONObject();
 				requestBody.put("tracking", aftershipRecord);
@@ -466,8 +478,8 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				// response body https://developers.aftership.com/reference/body-envelope
 				JSONObject aftershipResponse = new JSONObject(response);
 				log.debug("aftershipResponse: " + aftershipResponse);
-				
-				persistSale(shipstationOrder);
+
+				persistSale(orderNumber);
 			}
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::processShipStationBatch");
@@ -604,10 +616,33 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 		return trackingRecord;
 	}
-	
-	//TODO				
-	private void persistSale(JSONObject shipstationOrder) {
-		log.info("entering persistSale function" + shipstationOrder.toString());
+
+//	private void persistSale(String orderNumber) {
+	public void persistSale(String orderNumber) {
+		log.info("entering persistSale function" + orderNumber);
+
+		OrderItems orderItemsObject = orderItemsPersistenceService.read(orderNumber);
+		
+		JSONArray orderItems = new JSONArray(orderItemsObject.getOrderItems());
+
+		log.debug("orderItems: " + orderItems);
+
+		Iterator<Object> it = orderItems.iterator();
+		while (it.hasNext()) {
+			JSONObject item = (JSONObject) it.next();
+			log.debug("item: " + item);
+			
+			String sku = item.getString("id");
+			String productName = item.getString("name");
+			BigInteger unitPrice = item.getBigInteger("unitPrice");
+			BigInteger totalPrice = item.getBigInteger("totalPrice");
+			Integer quantitySold = item.getInt("quantity");
+
+			log.debug("breakpoint");
+			
+			salesPersistenceService.write(orderNumber, sku, productName, quantitySold, unitPrice, totalPrice);
+		}
+		
 	}
-	
+
 }
