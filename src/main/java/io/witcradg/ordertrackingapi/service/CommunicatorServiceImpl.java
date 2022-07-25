@@ -82,7 +82,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 	@Autowired
 	IOrderItemsPersistenceService orderItemsPersistenceService;
-	
+
 	@Autowired
 	ISalesPersistenceService salesPersistenceService;
 
@@ -116,7 +116,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	@Override
 	public void createCustomer(CustomerOrder customerOrder) throws Exception {
 
-		log.debug("createCustomer: " + customerOrder.toString());
+		JSONObject requestBody = null;
+		HttpEntity<String> request = null;
+		String response = null;
+		String customerId = null;
 
 		try {
 			JSONObject addressObject = new JSONObject();
@@ -125,40 +128,42 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			addressObject.put("address_line_3", customerOrder.getAddressLine3());
 			addressObject.put("administrative_district_level_1", customerOrder.getCity());
 			addressObject.put("administrative_district_level_2", customerOrder.getState());
-			// addressObject.put("administrative_district_level_3", "level3");
+
 			addressObject.put("country", "US");
 			addressObject.put("postal_code", customerOrder.getPostalCode());
 
-			JSONObject requestBody = new JSONObject();
-			// requestBody.put("company_name", customerOrder.getCompanyName());
+			requestBody = new JSONObject();
 			requestBody.put("email_address", customerOrder.getEmailAddress());
 			requestBody.put("family_name", customerOrder.getFamilyName());
 			requestBody.put("given_name", customerOrder.getGivenName());
-			// requestBody.put("nickname", customerOrder.getNickname());
 			requestBody.put("idempotency_key", UUID.randomUUID().toString());
 			requestBody.put("phone_number", customerOrder.getPhoneNumber());
 			requestBody.put("address", addressObject);
 
-			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
-			log.debug("request: " + request.getBody());
+			request = new HttpEntity<String>(requestBody.toString(), headers);
 
-			String response = restTemplate.postForObject(url_base + "/customers", request, String.class);
-			log.debug("response: " + response);
-
+			response = restTemplate.postForObject(url_base + "/customers", request, String.class);
 			JSONObject responseCustomer = new JSONObject(response);
-			String id = responseCustomer.getJSONObject("customer").getString("id");
-			log.debug("responseCustomer id: " + id);
-			customerOrder.setSqCustomerId(id);
+			customerId = responseCustomer.getJSONObject("customer").getString("id");
+			customerOrder.setSqCustomerId(customerId);
+
 		} catch (Exception e) {
-			log.error("Error in CommunicatorServiceImpl::createCustomer");
+			log.error("Error in CommunicatorServiceImpl::createCustomer: " + customerOrder.toString());
+			log.debug("request: " + request.getBody());
+			log.debug("response: " + response);
+			log.debug("responseCustomer id: " + customerId);
 			throw e;
 		}
 	}
 
 	@Override
 	public void createOrder(CustomerOrder customerOrder) throws Exception {
+
+		HttpEntity<String> request = null;
+		String response = null;
+		String responseOrderId = null;
+
 		try {
-			log.debug("createOrder: " + customerOrder.toString());
 
 			JSONObject basePriceMoney = new JSONObject();
 			basePriceMoney.put("amount", customerOrder.getScInvoiceTotal());
@@ -180,25 +185,34 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			requestBody.put("idempotency_key", UUID.randomUUID().toString());
 			requestBody.put("order", order);
 
-			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
-			log.debug("request: " + request.getBody());
+			request = new HttpEntity<String>(requestBody.toString(), headers);
 
-			String response = restTemplate.postForObject(url_base + "/orders", request, String.class);
+			response = restTemplate.postForObject(url_base + "/orders", request, String.class);
 
 			JSONObject responseOrder = new JSONObject(response);
-			String id = responseOrder.getJSONObject("order").getString("id");
-			log.debug(" responseOrder id: " + id);
-			customerOrder.setSqOrderId(id);
+			responseOrderId = responseOrder.getJSONObject("order").getString("id");
+			customerOrder.setSqOrderId(responseOrderId);
+
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::createOrder");
+			log.debug("createOrder: " + customerOrder.toString());
+			log.debug("request: " + request.getBody());
+			log.debug(" responseOrder id: " + responseOrderId);
 			throw e;
 		}
 	}
 
 	@Override
 	public void createInvoice(CustomerOrder customerOrder) {
+
+		String scheduledAt = null;
+		String dueDate = null;
+		String invoiceId = null;
+		int version = 0;
+		HttpEntity<String> request = null;
+		String response = null;
+
 		try {
-			log.debug("createInvoice: " + customerOrder.toString());
 
 			JSONObject primaryRecipient = new JSONObject();
 			primaryRecipient.put("customer_id", customerOrder.getSqCustomerId());
@@ -230,13 +244,11 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
 					.withZone(ZoneId.of("UTC"));
-			String scheduledAt = formatter.format(scheduledInstant);
+			scheduledAt = formatter.format(scheduledInstant);
 
-			log.debug("scheduled_at: " + scheduledAt);
 			invoiceObject.put("scheduled_at", scheduledAt);
 
-			String dueDate = scheduledInstant.toString().substring(0, 10);
-			log.debug("due_date: " + dueDate);
+			dueDate = scheduledInstant.toString().substring(0, 10);
 			paymentRequest.put("due_date", dueDate);
 
 			invoiceObject.put("primary_recipient", primaryRecipient);
@@ -245,51 +257,50 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			requestBody.put("idempotency_key", UUID.randomUUID().toString());
 			requestBody.put("invoice", invoiceObject);
 
-			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
-			log.debug("request: " + request.getBody());
+			request = new HttpEntity<String>(requestBody.toString(), headers);
 
-			String response = restTemplate.postForObject(url_base + "/invoices", request, String.class);
-			log.debug("response: \n" + response);
+			response = restTemplate.postForObject(url_base + "/invoices", request, String.class);
 
 			JSONObject responseInvoice = new JSONObject(response);
 			JSONObject invoice = responseInvoice.getJSONObject("invoice");
-			String id = invoice.getString("id");
-			int version = invoice.getInt("version");
-			log.debug("invoice id: " + id);
-			log.debug("invoice version: " + version);
-			customerOrder.setSqInvoiceId(id);
+			invoiceId = invoice.getString("id");
+			version = invoice.getInt("version");
+			customerOrder.setSqInvoiceId(invoiceId);
 			customerOrder.setSqInvoiceVersion(version);
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::createInvoice	");
+			log.debug("createInvoice: " + customerOrder.toString());
+			log.debug("scheduled_at: " + scheduledAt);
+			log.debug("due_date: " + dueDate);
+			log.debug("request: " + request.getBody());
+			log.debug("response: \n" + response);
+			log.debug("invoice id: " + invoiceId);
+			log.debug("invoice version: " + version);
 			throw e;
 		}
 	}
 
 	@Override
 	public void publishInvoice(CustomerOrder customerOrder) {
-		try {
-			log.debug("running publishInvoice: " + customerOrder);
 
+		HttpEntity<String> request = null;
+		String response = null;
+		JSONObject invoiceObject = null;
+
+		try {
 			JSONObject requestBody = new JSONObject();
 			requestBody.put("idempotency_key", UUID.randomUUID().toString());
 			requestBody.put("version", customerOrder.getSqInvoiceVersion().intValue());
 
-			HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), headers);
-			log.debug("request: " + request.getBody());
+			request = new HttpEntity<String>(requestBody.toString(), headers);
 			String publishURL = String.format(url_base + "/invoices/%s/publish", customerOrder.getSqInvoiceId());
-			String response = restTemplate.postForObject(publishURL, request, String.class);
-			log.debug("response publish invoice: " + response);
+			response = restTemplate.postForObject(publishURL, request, String.class);
 
 			// convert the response String to a json object
 			JSONObject responseInvoice = new JSONObject(response);
-			log.debug("responseInvoice: " + responseInvoice);
 
 			// from the response object get the invoice
-			JSONObject invoiceObject = responseInvoice.getJSONObject("invoice");
-			log.debug("invoiceObject: " + invoiceObject);
-
-//		String publicURL = invoiceObject.getString("public_url");
-//		log.debug("publicURL: " + publicURL);
+			invoiceObject = responseInvoice.getJSONObject("invoice");
 
 			// work-around
 			String publicURL = "https://squareup.com/pay-invoice/" + invoiceObject.getString("id");
@@ -298,15 +309,21 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			customerOrder.setPaymentURL(publicURL);
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::publishInvoice");
+			log.debug("customerOrder: " + customerOrder);
+			log.debug("request: " + request.getBody());
+			log.debug("response publish invoice: " + response);
+			log.debug("invoiceObject: " + invoiceObject);
+
 			throw e;
 		}
 	}
 
 	@Override
 	public void sendSms(CustomerOrder customerOrder) throws InvalidPhoneNumberException {
-		try {
-			log.debug("running sendSms: " + customerOrder);
 
+		String sendTo = null;
+
+		try {
 			String str = customerOrder.getPhoneNumber();
 
 			StringBuilder stringBuilder = new StringBuilder();
@@ -328,8 +345,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				throw new InvalidPhoneNumberException(customerOrder.getPhoneNumber());
 			}
 
-			String sendTo = stringBuilder.toString();
-			log.info("sendTo: " + sendTo);
+			sendTo = stringBuilder.toString();
 
 			String messageContent = String.format(
 					"Hey %s, Thank You for your Order on the D8G website. Use this link to Complete Your Purchase: %s "
@@ -344,6 +360,8 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			log.info("twilio message sid: " + message.getSid());
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::sendSms");
+			log.info("sendTo: " + sendTo);
+			log.debug("customerOrder: " + customerOrder);
 			throw e;
 		}
 	}
@@ -354,55 +372,57 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 	@Override
 	public void postShipStationOrder(CustomerOrder customerOrder) {
+		String publishURL = null;
+		JSONObject body = null;
+		HttpEntity<String> requestEntity = null;
+		String response = null;
+
 		try {
-			log.debug("shipHeaders: " + shipHeaders.toString());
+			publishURL = String.format("https://ssapi.shipstation.com/orders/createorder");
 
-			String publishURL = String.format("https://ssapi.shipstation.com/orders/createorder");
-			log.debug("publishURL: " + publishURL);
+			body = createShipStationOrderBody(customerOrder);
 
-			JSONObject body = createShipStationOrderBody(customerOrder);
-			log.debug("request body: " + body);
+			requestEntity = new HttpEntity<String>(body.toString(), shipHeaders);
 
-			HttpEntity<String> requestEntity = new HttpEntity<String>(body.toString(), shipHeaders);
-			log.debug("requestEntity: " + requestEntity);
-
-			String response = restTemplate.postForObject(publishURL, requestEntity, String.class);
-
-			// String response = restTemplate.postForObject(publishURL, request,
-			// String.class);
-			log.debug("response get: " + response);
+			response = restTemplate.postForObject(publishURL, requestEntity, String.class);
 
 			// convert the response String to a JSON object
 			JSONObject responseShipStation = new JSONObject(response);
 			log.debug("responseShipStation: " + responseShipStation);
 		} catch (Exception e) {
-			log.error("Error in CommunicatorServiceImpl::postShipStationOrder");
+			log.error("Error in postShipStationOrder: " + shipHeaders.toString());
+			log.debug("publishURL: " + publishURL);
+			log.debug("request body: " + body);
+			log.debug("requestEntity: " + requestEntity);
+			log.debug("response get: " + response);
 			throw e;
 		}
 	}
 
 	@Override
 	public void getShipStationOrder(String orderNumber) {
+
+		String publishURL = null;
+		ResponseEntity<String> response = null;
+		JSONObject responseShipStation = null;
+
 		try {
-			// example
-			// String publishURL =
 			// String.format("https://ssapi.shipstation.com/orders?orderNumber=D8G-1198");
-			String publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber=" + orderNumber);
+			publishURL = String.format("https://ssapi.shipstation.com/orders?orderNumber=" + orderNumber);
 			// String publishURL = String.format("https://ssapi.shipstation.com/orders");
-			log.debug("publishURL: " + publishURL);
 
 			HttpEntity<Void> requestEntity = new HttpEntity<>(shipHeaders);
 
-			ResponseEntity<String> response = restTemplate.exchange(publishURL, HttpMethod.GET, requestEntity,
-					String.class);
-			// log.debug("response get: " + response);
+			response = restTemplate.exchange(publishURL, HttpMethod.GET, requestEntity, String.class);
 
 			// convert the response String to a JSON object
-			JSONObject responseShipStation = new JSONObject(response);
-			log.debug("responseShipStation: " + responseShipStation);
-			log.debug("response body: " + responseShipStation.get("body"));
+			responseShipStation = new JSONObject(response);
+
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::getShipStationOrder");
+			log.debug("publishURL: " + publishURL);
+			log.debug("responseShipStation: " + responseShipStation);
+			log.debug("response body: " + responseShipStation.get("body"));
 			throw e;
 		}
 	}
@@ -413,27 +433,31 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 	@Override
 	public JSONObject getShipStationBatch(String resource_url) {
+
+		JSONObject responseShipStation = null;
+		String bdy = null;
 		JSONObject jsonObjectBody = null;
+
 		try {
-			log.debug("resource_url: " + resource_url);
 
 			HttpEntity<Void> requestEntity = new HttpEntity<>(shipHeaders);
 
 			ResponseEntity<String> response = restTemplate.exchange(resource_url, HttpMethod.GET, requestEntity,
 					String.class);
-			// log.debug("response get: " + response);
 
 			// convert the response String to a JSON object
-			JSONObject responseShipStation = new JSONObject(response);
-			log.debug("responseShipStation: " + responseShipStation);
+			responseShipStation = new JSONObject(response);
 
-			String bdy = responseShipStation.getString("body");
-			log.debug("getShipStationBatch response body: " + bdy);
+			bdy = responseShipStation.getString("body");
 
 			jsonObjectBody = new JSONObject(bdy);
 
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::getShipStationOrder");
+			log.debug("resource_url: " + resource_url);
+			log.debug("responseShipStation: " + responseShipStation);
+			log.debug("getShipStationBatch response body: " + bdy);
+
 			throw e;
 		}
 
@@ -441,28 +465,30 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	}
 
 	public void processShipStationBatch(JSONObject shipstationBatch) {
+		Integer total = null;
+		Integer page = null;
+		Integer pages = null;
+		JSONObject shipstationOrder = null;
+		JSONObject aftershipRecord = null;
+		HttpEntity<String> request = null;
+		JSONObject aftershipResponse = null;
+
 		try {
-			log.debug("entering processBatch function" + shipstationBatch.toString());
+			log.debug("entering processBatch function");
 
 			// extract data not in the array
-			Integer total = shipstationBatch.getInt("total");
-			Integer page = shipstationBatch.getInt("pages");
-			Integer pages = shipstationBatch.getInt("pages");
-
-			log.debug("total: " + total);
-			log.debug("page: " + page);
-			log.debug("pages: " + pages);
+			total = shipstationBatch.getInt("total");
+			page = shipstationBatch.getInt("pages");
+			pages = shipstationBatch.getInt("pages");
 
 			// get the shipments array
 			JSONArray shipments = shipstationBatch.getJSONArray("shipments");
 
 			// loop over all order records received from ShipStation
 			for (int i = 0; i < shipments.length(); i++) {
-				JSONObject shipstationOrder = shipments.getJSONObject(i);
-				log.debug("shipstationOrder: " + shipstationOrder.toString());
+				shipstationOrder = shipments.getJSONObject(i);
 
-				JSONObject aftershipRecord = createAfterShipTrackingRecord(shipstationOrder);
-				log.debug("aftershipRecord: " + aftershipRecord.toString());
+				aftershipRecord = createAfterShipTrackingRecord(shipstationOrder);
 
 				String orderNumber = aftershipRecord.getString("order_number");
 				orderHistoryPersistenceService.write(orderNumber, "Label printed");
@@ -470,19 +496,25 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				JSONObject requestBody = new JSONObject();
 				requestBody.put("tracking", aftershipRecord);
 
-				HttpEntity<String> request = new HttpEntity<String>(requestBody.toString(), afterShipHeaders);
-				log.debug("request: " + request.toString());
+				request = new HttpEntity<String>(requestBody.toString(), afterShipHeaders);
 
 				String response = restTemplate.postForObject(aftership_url_base + "/trackings", request, String.class);
 
 				// response body https://developers.aftership.com/reference/body-envelope
-				JSONObject aftershipResponse = new JSONObject(response);
-				log.debug("aftershipResponse: " + aftershipResponse);
+				aftershipResponse = new JSONObject(response);
 
 				persistSale(orderNumber);
 			}
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::processShipStationBatch");
+			log.debug("processBatch: " + shipstationBatch.toString());
+			log.debug("total: " + total);
+			log.debug("page: " + page);
+			log.debug("pages: " + pages);
+			log.debug("shipstationOrder: " + shipstationOrder.toString());
+			log.debug("aftershipRecord: " + aftershipRecord.toString());
+			log.debug("request: " + request.toString());
+			log.debug("aftershipResponse: " + aftershipResponse);
 			throw e;
 		}
 	}
@@ -542,7 +574,6 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 		}
 		requestBody.put("items", shipItems);
-		log.debug("requestBody original:" + requestBody);
 		return requestBody;
 	}
 
@@ -597,52 +628,40 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 		trackingRecord.put("order_number", orderNbr);
 
-		// trackingPost.put("order_id_path", ????); //This might be something that is
-		// only populated on a GET from AfterShip and not something we should populate
-
-		// custom fields pending
-
 		trackingRecord.put("language", "en");
 
-		// customer name
 		trackingRecord.put("customerName", customerName);
-
-		// order date
-		// is this createDate or shipDate? Are they the same? Is the date the order was
-		// received by ShipStation available?
-
-//		createDate: '2022-04-05T14:17:54.6800000',
-//		shipDate: '2022-04-05',
 
 		return trackingRecord;
 	}
 
-//	private void persistSale(String orderNumber) {
+//TODO	private void persistSale(String orderNumber) {
 	public void persistSale(String orderNumber) {
-		log.info("entering persistSale function" + orderNumber);
+		
+		JSONArray orderItems = null;
+		
+		try {
 
 		OrderItems orderItemsObject = orderItemsPersistenceService.read(orderNumber);
-		
-		JSONArray orderItems = new JSONArray(orderItemsObject.getOrderItems());
 
-		log.debug("orderItems: " + orderItems);
+		orderItems = new JSONArray(orderItemsObject.getOrderItems());
 
 		Iterator<Object> it = orderItems.iterator();
 		while (it.hasNext()) {
 			JSONObject item = (JSONObject) it.next();
-			log.debug("item: " + item);
-			
+//			log.debug("item: " + item);
 			String sku = item.getString("id");
 			String productName = item.getString("name");
 			BigInteger unitPrice = item.getBigInteger("unitPrice");
 			BigInteger totalPrice = item.getBigInteger("totalPrice");
 			Integer quantitySold = item.getInt("quantity");
 
-			log.debug("breakpoint");
-			
 			salesPersistenceService.write(orderNumber, sku, productName, quantitySold, unitPrice, totalPrice);
 		}
-		
+		} catch(Exception e) {
+			log.info("persistSale exception for order: " + orderNumber);
+			log.info("orderItems: " + orderItems);
+			throw e;
+		}
 	}
-
 }
