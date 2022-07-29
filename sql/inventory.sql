@@ -7,3 +7,8 @@ CREATE TABLE inventory (
     product_name VARCHAR(50) NOT NULL,
     on_hand INTEGER DEFAULT 0);
 
+
+ALTER TABLE inventory
+ADD COLUMN trigger INTEGER DEFAULT 17,
+ADD COLUMN selling BOOLEAN DEFAULT true;
+
