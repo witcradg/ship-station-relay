@@ -520,19 +520,27 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				// response body https://developers.aftership.com/reference/body-envelope
 				aftershipResponse = new JSONObject(response);
 
+				//If an exception occurs let's allow this to be skipped. Every exception 
+				// I've seen is due to "Tracking already exists" 400 error. That means 
+				// the values being saved here were saved in the first POST.
 				persistSaleAndInventory(orderNumber);
 			}
 		} catch (Exception e) {
-			log.error("Error in CommunicatorServiceImpl::processShipStationBatch");
-			log.debug("processBatch: " + shipstationBatch.toString());
-			log.debug("total: " + total);
-			log.debug("page: " + page);
-			log.debug("pages: " + pages);
-			log.debug("shipstationOrder: " + shipstationOrder.toString());
-			log.debug("aftershipRecord: " + aftershipRecord.toString());
-			log.debug("request: " + request.toString());
-			log.debug("aftershipResponse: " + aftershipResponse);
-			throw e;
+			String msg = e.getMessage();
+			//This is not an error condition
+			if (!msg.contains("Tracking already exists")) {
+				log.error("Error in CommunicatorServiceImpl::processShipStationBatch");
+				log.debug("processBatch: " + shipstationBatch.toString());
+				log.debug("total: " + total);
+				log.debug("page: " + page);
+				log.debug("pages: " + pages);
+				log.debug("shipstationOrder: " + shipstationOrder.toString());
+				log.debug("aftershipRecord: " + aftershipRecord.toString());
+				log.debug("request: " + request.toString());
+				throw e;
+			} else {
+				log.debug("AfterShip returned %s", msg);
+			}
 		}
 	}
 
