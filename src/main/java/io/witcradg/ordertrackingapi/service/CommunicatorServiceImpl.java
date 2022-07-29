@@ -1,6 +1,6 @@
 package io.witcradg.ordertrackingapi.service;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -34,8 +34,10 @@ import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 
 import io.witcradg.ordertrackingapi.entity.CustomerOrder;
+import io.witcradg.ordertrackingapi.entity.Inventory;
 import io.witcradg.ordertrackingapi.entity.OrderItems;
 import io.witcradg.ordertrackingapi.exception.InvalidPhoneNumberException;
+import io.witcradg.ordertrackingapi.persistence.IInventoryPersistenceService;
 import io.witcradg.ordertrackingapi.persistence.IOrderHistoryPersistenceService;
 import io.witcradg.ordertrackingapi.persistence.IOrderItemsPersistenceService;
 import io.witcradg.ordertrackingapi.persistence.ISalesPersistenceService;
@@ -85,6 +87,9 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 	@Autowired
 	ISalesPersistenceService salesPersistenceService;
+
+	@Autowired
+	IInventoryPersistenceService inventoryPersistenceService;
 
 	private RestTemplate restTemplate = new RestTemplate();
 	private HttpHeaders headers = new HttpHeaders();
@@ -360,7 +365,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			log.info("twilio message sid: " + message.getSid());
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::sendSms");
-			log.info("sendTo: " + sendTo);
+			log.debug("sendTo: " + sendTo);
 			log.debug("customerOrder: " + customerOrder);
 			throw e;
 		}
@@ -431,6 +436,13 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 	 * SHIP STATION RELAY METHODS
 	 *******************************************************************/
 
+	/**
+	 * A WebHook at ShipStation is triggered when a label is printed. These labels
+	 * are printed in a batch of orders (may be a batch of one). ShipStation sends a
+	 * URL that we use to retrieve the batch details. A record of the sale of each
+	 * item is persisted and the inventory is decremented.
+	 */
+
 	@Override
 	public JSONObject getShipStationBatch(String resource_url) {
 
@@ -463,6 +475,11 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 		return jsonObjectBody;
 	}
+
+	/**
+	 * Once batch details have been retrieved containing one or more orders. We send
+	 * each order to AfterShip.
+	 */
 
 	public void processShipStationBatch(JSONObject shipstationBatch) {
 		Integer total = null;
@@ -503,7 +520,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				// response body https://developers.aftership.com/reference/body-envelope
 				aftershipResponse = new JSONObject(response);
 
-				persistSale(orderNumber);
+				persistSaleAndInventory(orderNumber);
 			}
 		} catch (Exception e) {
 			log.error("Error in CommunicatorServiceImpl::processShipStationBatch");
@@ -610,17 +627,10 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		String title = "OrderTrackingAutomation-" + timeStamp;
 		trackingRecord.put("title", title);
 
-		// TODO with implementation of data storage and retrieval on receipt of the
-		// original record from snipcart
-		// smses
-//		JSONArray smses = new JSONArray();
-//		smses.put(phone);
-//		trackingRecord.put("smses", smses);
-
 		// emails
 		JSONArray emails = new JSONArray();
 		String email = shipstationOrder.getString("customerEmail");
-		log.info(email);
+		log.debug(email);
 		emails.put(email);
 		trackingRecord.put("emails", emails);
 
@@ -635,32 +645,52 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		return trackingRecord;
 	}
 
-//TODO	private void persistSale(String orderNumber) {
-	public void persistSale(String orderNumber) {
-		
+	/**
+	 * Write a record of each items sold for the order then decrement the number
+	 * sold from the inventory table.
+	 * 
+	 * @param orderNumber
+	 */
+	private void persistSaleAndInventory(String orderNumber) {
+
 		JSONArray orderItems = null;
-		
+		String sku = null;
+		String productName = null;
+		BigDecimal unitPrice = null;
+		BigDecimal totalPrice = null;
+		Integer quantitySold = null;
+		Inventory inventory = null;
+
 		try {
 
-		OrderItems orderItemsObject = orderItemsPersistenceService.read(orderNumber);
+			OrderItems orderItemsObject = orderItemsPersistenceService.read(orderNumber);
 
-		orderItems = new JSONArray(orderItemsObject.getOrderItems());
+			orderItems = new JSONArray(orderItemsObject.getOrderItems());
 
-		Iterator<Object> it = orderItems.iterator();
-		while (it.hasNext()) {
-			JSONObject item = (JSONObject) it.next();
-//			log.debug("item: " + item);
-			String sku = item.getString("id");
-			String productName = item.getString("name");
-			BigInteger unitPrice = item.getBigInteger("unitPrice");
-			BigInteger totalPrice = item.getBigInteger("totalPrice");
-			Integer quantitySold = item.getInt("quantity");
+			Iterator<Object> it = orderItems.iterator();
+			while (it.hasNext()) {
+				JSONObject item = (JSONObject) it.next();
+				sku = item.getString("id");
+				productName = item.getString("name");
+				unitPrice = item.getBigDecimal("unitPrice");
+				totalPrice = item.getBigDecimal("totalPrice");
+				quantitySold = item.getInt("quantity");
 
-			salesPersistenceService.write(orderNumber, sku, productName, quantitySold, unitPrice, totalPrice);
-		}
-		} catch(Exception e) {
-			log.info("persistSale exception for order: " + orderNumber);
-			log.info("orderItems: " + orderItems);
+				// record the details of the item sold
+				salesPersistenceService.write(orderNumber, sku, productName, quantitySold, unitPrice, totalPrice);
+
+				// update the inventory stock on hand
+				inventory = inventoryPersistenceService.read(sku);
+				inventory.setOnHand(inventory.getOnHand() - quantitySold);
+				inventoryPersistenceService.save(inventory);
+			}
+		} catch (Exception e) {
+			log.debug("persistSaleAndInventory exception for order: " + orderNumber);
+			log.debug("orderItems: " + orderItems);
+			log.debug(String.format(
+					"orderNumber: %s\n sku: %s\n productName: %s\n quantitySold: %d\n unitPrice: %d\n, totalPrice: %d\n",
+					orderNumber, sku, productName, quantitySold, unitPrice, totalPrice));
+			log.debug("inventory: " + inventory);
 			throw e;
 		}
 	}

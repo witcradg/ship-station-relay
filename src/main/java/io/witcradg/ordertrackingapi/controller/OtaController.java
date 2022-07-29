@@ -15,9 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.witcradg.ordertrackingapi.entity.CustomerOrder;
+//import io.witcradg.ordertrackingapi.persistence.IOrderDetailPersistenceService;
 import io.witcradg.ordertrackingapi.persistence.IOrderHistoryPersistenceService;
 import io.witcradg.ordertrackingapi.persistence.IOrderItemsPersistenceService;
-import io.witcradg.ordertrackingapi.persistence.ISalesPersistenceService;
+import io.witcradg.ordertrackingapi.repository.OrderDetailRepository;
 import io.witcradg.ordertrackingapi.service.ICommunicatorService;
 import io.witcradg.ordertrackingapi.service.IEmailSenderService;
 import lombok.extern.log4j.Log4j2;
@@ -39,11 +40,14 @@ public class OtaController {
 	@Autowired
 	IOrderHistoryPersistenceService orderHistoryPersistence;
 
-	@Autowired
-	IOrderItemsPersistenceService orderItemsPersistence;
+//	@Autowired
+//	IOrderDetailPersistenceService orderDetailPersistence;
 
 	@Autowired
-	ISalesPersistenceService salesPersistence;
+	OrderDetailRepository orderDetailRepository;
+
+	@Autowired
+	IOrderItemsPersistenceService orderItemsPersistence;
 
 	boolean validOrder = false;
 
@@ -81,10 +85,16 @@ public class OtaController {
 					communicatorService.postShipStationOrder(customerOrder);
 					orderHistoryPersistence.write(orderNumber, "ShipStation order posted");
 				}
+
+				log.info("baseTotal: " + customerOrder.getOrderDetail().getBaseTotal());
+
+				orderDetailRepository.save(customerOrder.getOrderDetail());
 				orderItemsPersistence.write(orderNumber, customerOrder.getItems().toString());
-				
-				communicatorService.persistSale(orderNumber);
+
+			} else if (jsonObject.has("eventName")) {
+				log.info("A JSON object was recieved with an eventName of: " + jsonObject.getString("eventName"));
 			}
+
 			return new ResponseEntity<>(HttpStatus.OK);
 		} catch (Exception e) {
 			log.error(e.getMessage());

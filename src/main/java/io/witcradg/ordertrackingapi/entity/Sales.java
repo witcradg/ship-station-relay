@@ -1,5 +1,6 @@
 package io.witcradg.ordertrackingapi.entity;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Date;
 
@@ -34,10 +35,10 @@ public class Sales {
 	private String productName;
 	
 	@Column(name = "unit_price")
-	private BigInteger unitPrice;	
+	private BigDecimal unitPrice;	
 	
 	@Column(name = "total_price")
-	private BigInteger totalPrice;		
+	private BigDecimal totalPrice;		
 	
 	@Column(name = "quantity_sold")
 	private Integer quantitySold;
@@ -46,7 +47,7 @@ public class Sales {
 		super();
 	}
 
-	public Sales(String orderNumber, String sku, String productName, Integer quantitySold, BigInteger unitPrice, BigInteger totalPrice) {
+	public Sales(String orderNumber, String sku, String productName, Integer quantitySold, BigDecimal unitPrice, BigDecimal totalPrice) {
 		super();
 		this.orderNumber = orderNumber;
 		this.sku = sku;

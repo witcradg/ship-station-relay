@@ -1,6 +1,6 @@
 package io.witcradg.ordertrackingapi.persistence;
 
-import java.math.BigInteger;
+import java.math.BigDecimal;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,8 +22,8 @@ public class SalesPersistenceServiceImpl implements ISalesPersistenceService {
 			String sku, 
 			String productName, 
 			Integer quantitySold, 
-			BigInteger unitPrice, 
-			BigInteger totalPrice) {
+			BigDecimal unitPrice, 
+			BigDecimal totalPrice) {
 		log.info(String.format("SalesPersistenceServiceImpl::write\n %s | %s | %s | %n",
 				orderNumber, sku, productName, quantitySold, unitPrice, totalPrice));
 

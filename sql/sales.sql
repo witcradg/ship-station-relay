@@ -1,0 +1,13 @@
+ALTER TABLE sales
+  ALTER COLUMN date_sold TYPE TIMESTAMP;
+
+ALTER TABLE sales
+  ALTER COLUMN date_sold DROP NOT NULL;
+
+ALTER TABLE sales
+  ALTER COLUMN date_sold SET DEFAULT NOW();
+
+ALTER TABLE sales
+  ALTER COLUMN quantity_sold SET NOT NULL;  
+
+

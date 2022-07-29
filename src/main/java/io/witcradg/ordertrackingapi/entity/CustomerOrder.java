@@ -22,6 +22,8 @@ public class CustomerOrder {
 			this.setScInvoiceTotal((int) (content.getDouble("finalGrandTotal") * 100));
 			this.setScOrderWeight(Integer.toString(content.getInt("totalWeight")));
 			this.setScOrderDate(content.getString("completionDate"));
+			
+	        this.setOrderDetail(new OrderDetail(content));
 
 			JSONObject address = content.getJSONObject("shippingAddress");
 
@@ -32,7 +34,7 @@ public class CustomerOrder {
 			this.setFamilyName(address.getString("name"));
 			this.setGivenName(address.isNull("firstName") ? "" : address.getString("firstName"));
 			this.setAddressLine1(address.getString("address1"));
-			this.setAddressLine2(address.getString("address2"));
+			this.setAddressLine2(address.isNull("address2") ? "" : address.getString("address2"));
 			this.setCity(address.getString("city"));
 			this.setState(address.getString("province"));
 			this.setPostalCode(address.getString("postalCode"));
@@ -74,8 +76,11 @@ public class CustomerOrder {
 
 	private JSONArray items;
 
+	//TODO consider removing in favor of using orderDetail
 	private String scInvoiceNumber;// sc - snip cart
 	private Integer scInvoiceTotal;
+	
+	private OrderDetail orderDetail;
 
 	private String scOrderWeight;
 	private String scOrderDate;
