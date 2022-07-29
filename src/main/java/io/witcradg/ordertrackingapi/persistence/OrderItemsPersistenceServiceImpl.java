@@ -29,7 +29,7 @@ public class OrderItemsPersistenceServiceImpl implements IOrderItemsPersistenceS
 
 	@Override
 	public void write(String orderNumber, String items) {
-		log.info(String.format("OrderItemsPersistenceServiceImpl::write\n %s | %s", orderNumber, items));
+		log.info(String.format("OrderItemsPersistenceServiceImpl::write\n %s ", orderNumber));
 
 		OrderItems order = new OrderItems(orderNumber, items);
 		orderItemsRepository.save(order);

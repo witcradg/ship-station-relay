@@ -381,6 +381,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		JSONObject body = null;
 		HttpEntity<String> requestEntity = null;
 		String response = null;
+        JSONObject responseShipStation = null;
 
 		try {
 			publishURL = String.format("https://ssapi.shipstation.com/orders/createorder");
@@ -392,14 +393,14 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 			response = restTemplate.postForObject(publishURL, requestEntity, String.class);
 
 			// convert the response String to a JSON object
-			JSONObject responseShipStation = new JSONObject(response);
-			log.debug("responseShipStation: " + responseShipStation);
+			responseShipStation = new JSONObject(response);
 		} catch (Exception e) {
 			log.error("Error in postShipStationOrder: " + shipHeaders.toString());
 			log.debug("publishURL: " + publishURL);
 			log.debug("request body: " + body);
 			log.debug("requestEntity: " + requestEntity);
 			log.debug("response get: " + response);
+            log.debug("responseShipStation: " + responseShipStation);
 			throw e;
 		}
 	}
@@ -537,6 +538,7 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				log.debug("shipstationOrder: " + shipstationOrder.toString());
 				log.debug("aftershipRecord: " + aftershipRecord.toString());
 				log.debug("request: " + request.toString());
+				log.debug("aftershipResponse: " + aftershipResponse.toString());
 				throw e;
 			} else {
 				log.debug("AfterShip returned %s", msg);

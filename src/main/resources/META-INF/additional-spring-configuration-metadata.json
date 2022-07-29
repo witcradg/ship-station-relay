@@ -1,6 +1,16 @@
 {
 	"properties": [
 		{
+			"name": "controller.useSquareApi",
+			"type": "java.lang.boolean",
+			"description": "feature toggle"
+		},
+		{
+			"name": "controller.useShipStationApi",
+			"type": "java.lang.boolean",
+			"description": "feature toggle"
+		},
+		{
 			"name": "configuration.square.access",
 			"type": "java.lang.String",
 			"description": "A description for 'configuration.square.access'"

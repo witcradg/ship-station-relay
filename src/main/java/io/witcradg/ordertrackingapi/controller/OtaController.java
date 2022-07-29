@@ -7,6 +7,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,9 +28,12 @@ import lombok.extern.log4j.Log4j2;
 @RestController
 public class OtaController {
 
-	// optionally disable unused code without deleting it
-	boolean useSquareApi = false;
-	boolean useShipStationApi = false;
+	// feature toggles
+	@Value("${controller.useSquareApi}")
+	private boolean useSquareApi;
+	
+	@Value("${controller.useShipStationApi}")
+	private boolean useShipStationApi;
 
 	@Autowired
 	ICommunicatorService communicatorService;
@@ -40,9 +44,6 @@ public class OtaController {
 	@Autowired
 	IOrderHistoryPersistenceService orderHistoryPersistence;
 
-//	@Autowired
-//	IOrderDetailPersistenceService orderDetailPersistence;
-
 	@Autowired
 	OrderDetailRepository orderDetailRepository;
 
@@ -51,7 +52,7 @@ public class OtaController {
 
 	boolean validOrder = false;
 
-	// used for logging the most recent step in case of a processing error
+	// log the most recent step on processing errors
 	String stepMessage = "";
 	String orderNumber = "";
 
@@ -85,8 +86,6 @@ public class OtaController {
 					communicatorService.postShipStationOrder(customerOrder);
 					orderHistoryPersistence.write(orderNumber, "ShipStation order posted");
 				}
-
-				log.info("baseTotal: " + customerOrder.getOrderDetail().getBaseTotal());
 
 				orderDetailRepository.save(customerOrder.getOrderDetail());
 				orderItemsPersistence.write(orderNumber, customerOrder.getItems().toString());
