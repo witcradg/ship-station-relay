@@ -330,7 +330,11 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 
 		try {
 			String str = customerOrder.getPhoneNumber();
-
+			if (str == null) {
+				log.info("Mising phone number. Skipping SMS for order: " + customerOrder);
+				return;
+			}
+			
 			StringBuilder stringBuilder = new StringBuilder();
 
 			for (char dig : str.toCharArray()) {
