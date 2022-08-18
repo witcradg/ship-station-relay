@@ -582,8 +582,8 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		requestBody.put("amountPaid", customerOrder.getScInvoiceTotal());
 		requestBody.put("shippingPaid", customerOrder.getShippingTotal());
 		requestBody.put("customerEmail", customerOrder.getEmailAddress());
-//		requestBody.put("taxAmount", 
-
+		requestBody.put("Tags", "Paid");
+		
 		/*
 		 * Extract items from the customer order and add the relevant fields to the ship
 		 * station order
