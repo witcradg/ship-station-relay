@@ -34,6 +34,11 @@ import lombok.extern.log4j.Log4j2;
 @Log4j2
 @Service
 public class ShipStationServiceImpl implements IShipStationService {
+	private int TAGID_NOT_PAID = 40227;
+	private int TAGID_PAID = 40228;
+	
+	@Value("${controller.useSquareApi}")
+	private boolean useSquareApi;
 
 	@Value("${shipstation.api.key}")
 	private String shipstationApiKey;
@@ -153,6 +158,7 @@ public class ShipStationServiceImpl implements IShipStationService {
 
 	@Override
 	public JSONObject getShipStationBatch(String resource_url) {
+		
 
 		JSONObject responseShipStation = null;
 		String bdy = null;
@@ -270,7 +276,8 @@ public class ShipStationServiceImpl implements IShipStationService {
 		JSONObject advancedOptions = new JSONObject().put("customField1", "PAID as advanced option");
 		requestBody.put("advancedOptions",  advancedOptions);
 		
-		JSONArray tagIds = new JSONArray().put(40228);
+		int tagid = useSquareApi ? TAGID_NOT_PAID : TAGID_PAID;
+		JSONArray tagIds = new JSONArray().put(tagid);
 		requestBody.put("tagid", tagIds);
 		/*
 		 * Extract items from the customer order and add the relevant fields to the ship
