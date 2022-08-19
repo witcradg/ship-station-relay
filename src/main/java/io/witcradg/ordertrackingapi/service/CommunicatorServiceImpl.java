@@ -582,7 +582,8 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 		requestBody.put("amountPaid", customerOrder.getScInvoiceTotal());
 		requestBody.put("shippingPaid", customerOrder.getShippingTotal());
 		requestBody.put("customerEmail", customerOrder.getEmailAddress());
-		requestBody.put("Tags", "Paid");
+		requestBody.put("tagid", 123);
+		requestBody.put("pmtStatus", "NOT PAID");
 		
 		/*
 		 * Extract items from the customer order and add the relevant fields to the ship
@@ -602,9 +603,9 @@ public class CommunicatorServiceImpl implements ICommunicatorService {
 				shipItem.put("name", orderItem.getString("name"));
 				shipItems.add(shipItem);
 			}
-
 		}
 		requestBody.put("items", shipItems);
+		log.info("requestBody: " + requestBody);
 		return requestBody;
 	}
 
