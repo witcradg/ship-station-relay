@@ -22,6 +22,7 @@ import io.witcradg.ordertrackingapi.persistence.IOrderItemsPersistenceService;
 import io.witcradg.ordertrackingapi.repository.OrderDetailRepository;
 import io.witcradg.ordertrackingapi.service.ICommunicatorService;
 import io.witcradg.ordertrackingapi.service.IEmailSenderService;
+import io.witcradg.ordertrackingapi.service.IShipStationService;
 import lombok.extern.log4j.Log4j2;
 
 @Log4j2
@@ -37,6 +38,9 @@ public class OtaController {
 
 	@Autowired
 	ICommunicatorService communicatorService;
+	
+	@Autowired
+	IShipStationService shipStationService;
 
 	@Autowired
 	IEmailSenderService emailSenderService;
@@ -83,7 +87,8 @@ public class OtaController {
 					orderHistoryPersistence.write(orderNumber, "SMS sent");
 				}
 				if (useShipStationApi) {
-					communicatorService.postShipStationOrder(customerOrder);
+					//shipStationService.runShipStationUtility();
+					shipStationService.postShipStationOrder(customerOrder);
 					orderHistoryPersistence.write(orderNumber, "ShipStation order posted");
 				}
 
@@ -124,9 +129,9 @@ public class OtaController {
 		JSONObject jsonObject = new JSONObject(rawJson);
 		if ("SHIP_NOTIFY".equals(jsonObject.getString("resource_type"))) {
 			try {
-				JSONObject shipstationBatch = communicatorService
+				JSONObject shipstationBatch = shipStationService
 						.getShipStationBatch(jsonObject.getString("resource_url"));
-				communicatorService.processShipStationBatch(shipstationBatch);
+				shipStationService.processShipStationBatch(shipstationBatch);
 			} catch (Exception e) {
 				log.error(e.getMessage());
 				log.error("rawJson: " + rawJson);
